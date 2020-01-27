@@ -277,6 +277,9 @@ def theaterChaseRainbow(strip, wait_ms=50):
 # Main program logic follows:
 if __name__ == '__main__':
 
+    # connect to AWSIoT
+    connect()
+
     # Create NeoPixel object with appropriate configuration.
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     # Intialize the library (must be called once before other functions).
