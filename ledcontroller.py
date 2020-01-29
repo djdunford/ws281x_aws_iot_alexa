@@ -12,12 +12,12 @@
 #
 import json
 import sys
-import time
 from rpi_ws281x import PixelStrip, Color
 import os
 import configparser
 import logging
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTShadowClient
+from effects import colorWipe, theaterChase, rainbow, rainbowCycle, theaterChaseRainbow
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -74,20 +74,75 @@ LOGGER.info("Parameters loaded:" + json.dumps(settings, indent=2))
 #
 # Define functions which implement AWSIoT integration
 # define functions and classes
-class ShadowCallbackContainer:
+class DeviceShadowHandler:
+
+    # post status update message to device shadow and, if enabled, syslog
+    def status_post(self, status, state=None):
+        """Post status message and device state to AWSIoT and LOGGER"""
+
+        # create new JSON payload to update device shadow
+        new_payload = {"state": {"reported": {"command": str(status), "sequencerun": None, "sequence": None},
+                                "desired": None}}
+        if state:
+            new_payload.update({"state": {"reported": state}})
+
+        # update shadow
+        self.shadowHandler.shadowUpdate(json.dumps(new_payload), None, 20)
+
+        # log to syslog
+        LOGGER.info(status)
+
+        return
+
 
     # constructor
-    def __init__(self, shadow_instance):
-        self.deviceShadowInstance = shadow_instance
+    def __init__(self):
+        """Initiate connection to AWSIoT.
+        :rtype: object
+        """
+
+        # Init Shadow Client MQTT connection
+        self.shadowClient = AWSIoTMQTTShadowClient(AWSIOT_THINGNAME)
+        self.shadowClient.configureEndpoint(AWSIOT_HOST, 8883)
+        self.shadowClient.configureCredentials(AWSIOT_ROOT_CA_PATH, AWSIOT_PRIVATE_KEY_PATH, AWSIOT_CERTIFICATE_PATH)
+
+        # AWSIoTMQTTShadowClient configuration
+        self.shadowClient.configureAutoReconnectBackoffTime(1, 32, 20)
+        self.shadowClient.configureConnectDisconnectTimeout(20)  # 20 sec
+        self.shadowClient.configureMQTTOperationTimeout(20)  # 20 sec
+
+        # force shadow client to use offline publish queueing
+        # overriding the default behaviour for shadow clients in the SDK
+        mqtt_client = self.shadowClient.getMQTTConnection()
+        mqtt_client.configureOfflinePublishQueueing(-1)
+
+        # Connect to AWS IoT with a 300 second keepalive
+        self.shadowClient.connect(300)
+
+        # Create a deviceShadow with persistent subscription
+        self.shadowHandler = self.shadowClient.createShadowHandlerWithName(AWSIOT_THINGNAME, True)
+
+        # initial status post
+        self.status_post('STARTING')
+
+        # dictionary to hold callback responses
+        # TODO: add logic to clear out stale entries, otherwise will become a memory leak
         self.callbackresponses = {}
+
 
     # Custom shadow callback for delta -> remote triggering
     def customShadowCallback_Delta(self, payload, responseStatus, token):
+        """
+
+        :param payload:
+        :param responseStatus:
+        :param token:
+        """
+
         # payload is a JSON string ready to be parsed using json.loads(...)
 
         # declare global variables updated by this procedure
         global trigger
-        # global lock
         global settings
 
         # DEBUG dump payload in to syslog
@@ -124,10 +179,18 @@ class ShadowCallbackContainer:
         LOGGER.info("Shadow update: " + json.dumps(newPayload))
 
         # update shadow instance status
-        self.deviceShadowInstance.shadowUpdate(json.dumps(newPayload), None, 5)
+        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
+
 
     # Custom Shadow callback for GET operations
     def customShadowCallback_Get(self, payload, responseStatus, token):
+        """
+
+        :param payload:
+        :param responseStatus:
+        :param token:
+        :return:
+        """
         self.callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": responseStatus}})
         return
 
@@ -137,22 +200,7 @@ class ShadowCallbackContainer:
     # post all parameters as a shadow update
     def paramPost(self):
         newPayload = {"state": {"reported": {"settings": settings}, "desired": None}}
-        self.deviceShadowInstance.shadowUpdate(json.dumps(newPayload), None, 5)
-
-    # post status update message to device shadow and, if enabled, syslog
-    def statusPost(self, status, state=None):
-
-        # create new JSON payload to update device shadow
-        newPayload = {"state": {"reported": {"command": str(status), "sequencerun": None, "sequence": None},
-                                "desired": None}}
-        if state:
-            newPayload.update({"state": {"reported": state}})
-
-        # update shadow
-        self.deviceShadowInstance.shadowUpdate(json.dumps(newPayload), None, 20)
-
-        # log to syslog
-        LOGGER.info(status)
+        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
 
         return
 
@@ -161,7 +209,7 @@ class ShadowCallbackContainer:
 
         # create new JSON payload to update device shadow
         newPayload = {"state": {"reported": {"command": state}, "desired": None}}
-        self.deviceShadowInstance.shadowUpdate(json.dumps(newPayload), None, 20)
+        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 20)
 
         # log to syslog
         LOGGER.info("New state" + json.dumps(state))
@@ -172,7 +220,7 @@ class ShadowCallbackContainer:
 
         # create new JSON payload to send device temperature to shadow
         newPayload = {"state": {"reported": {"cputemp": temp}}}
-        self.deviceShadowInstance.shadowUpdate(json.dumps(newPayload), None, 20)
+        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 20)
 
         # log to syslog on debug only
         LOGGER.debug("New temp payload " + json.dumps(newPayload))
@@ -180,105 +228,11 @@ class ShadowCallbackContainer:
         return
 
 
-def connect():
-    """Initiate connection to AWSIoT."""
-    # Init Shadow Client MQTT connection
-    myAWSIoTMQTTShadowClient = AWSIoTMQTTShadowClient(AWSIOT_THINGNAME)
-    myAWSIoTMQTTShadowClient.configureEndpoint(AWSIOT_HOST, 8883)
-    myAWSIoTMQTTShadowClient.configureCredentials(AWSIOT_ROOT_CA_PATH, AWSIOT_PRIVATE_KEY_PATH, AWSIOT_CERTIFICATE_PATH)
-
-    # AWSIoTMQTTShadowClient configuration
-    myAWSIoTMQTTShadowClient.configureAutoReconnectBackoffTime(1, 32, 20)
-    myAWSIoTMQTTShadowClient.configureConnectDisconnectTimeout(20)  # 20 sec
-    myAWSIoTMQTTShadowClient.configureMQTTOperationTimeout(20)  # 20 sec
-
-    # force shadow client to use offline publish queueing
-    # overriding the default behaviour for shadow clients in the SDK
-    MQTTClient = myAWSIoTMQTTShadowClient.getMQTTConnection()
-    MQTTClient.configureOfflinePublishQueueing(-1)
-
-    # Connect to AWS IoT with a 300 second keepalive
-    myAWSIoTMQTTShadowClient.connect(300)
-
-    # Create a deviceShadow with persistent subscription
-    Bot = myAWSIoTMQTTShadowClient.createShadowHandlerWithName(AWSIOT_THINGNAME, True)
-
-    # create new instance of shadowCallbackContainer class
-    shadowCallbackContainer_Bot = ShadowCallbackContainer(Bot)
-
-    # initial status post
-    shadowCallbackContainer_Bot.statusPost('STARTING')
-
-
-# Define functions which animate LEDs in various ways.
-def colorWipe(strip, color, wait_ms=50):
-    """Wipe color across display a pixel at a time."""
-    for i in range(strip.numPixels()):
-        strip.setPixelColor(i, color)
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
-
-
-def theaterChase(strip, color, wait_ms=50, iterations=10):
-    """Movie theater light style chaser animation."""
-    for j in range(iterations):
-        for q in range(3):
-            for i in range(0, strip.numPixels(), 3):
-                strip.setPixelColor(i + q, color)
-            strip.show()
-            time.sleep(wait_ms / 1000.0)
-            for i in range(0, strip.numPixels(), 3):
-                strip.setPixelColor(i + q, 0)
-
-
-def wheel(pos):
-    """Generate rainbow colors across 0-255 positions."""
-    if pos < 85:
-        return Color(pos * 3, 255 - pos * 3, 0)
-    elif pos < 170:
-        pos -= 85
-        return Color(255 - pos * 3, 0, pos * 3)
-    else:
-        pos -= 170
-        return Color(0, pos * 3, 255 - pos * 3)
-
-
-def rainbow(strip, wait_ms=20, iterations=1):
-    """Draw rainbow that fades across all pixels at once."""
-    for j in range(256 * iterations):
-        for i in range(strip.numPixels()):
-            strip.setPixelColor(i, wheel((i + j) & 255))
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
-
-
-def rainbowCycle(strip, wait_ms=20, iterations=5):
-    """Draw rainbow that uniformly distributes itself across all pixels."""
-    for j in range(256 * iterations):
-        for i in range(strip.numPixels()):
-            strip.setPixelColor(i, wheel(
-                (int(i * 256 / strip.numPixels()) + j) & 255))
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
-
-
-def theaterChaseRainbow(strip, wait_ms=50):
-    """Rainbow movie theater light style chaser animation."""
-    for j in range(256):
-        for q in range(3):
-            for i in range(0, strip.numPixels(), 3):
-                strip.setPixelColor(i + q, wheel((i + j) % 255))
-            strip.show()
-            time.sleep(wait_ms / 1000.0)
-            for i in range(0, strip.numPixels(), 3):
-                strip.setPixelColor(i + q, 0)
-
-
 # Main program logic follows:
 if __name__ == '__main__':
 
     # connect to AWSIoT
-    connect()
+    device = DeviceShadowHandler()
 
     # Create NeoPixel object with appropriate configuration.
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
