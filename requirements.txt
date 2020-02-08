@@ -1,3 +1,4 @@
 AWSIoTPythonSDK==1.4.7
 rpi_ws281x==4.2.3
 gpiozero==1.5.1
+RPi.GPIO==0.7.0
