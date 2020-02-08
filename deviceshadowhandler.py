@@ -1,8 +1,12 @@
 import json
+import logging
 
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTShadowClient
 
-from ledcontroller import LOGGER, SETTINGS_KEYS, settings
+# setup logging and set log level according to ini file
+LOGGER = logging.getLogger("deviceshadowhandler")
+# TODO set log level according to an environment setting
+LOGGER.setLevel(logging.DEBUG)
 
 #
 #
@@ -65,6 +69,8 @@ class DeviceShadowHandler:
 
         self.trigger = 0
 
+        self.settings = None
+
         return
 
 
@@ -88,18 +94,20 @@ class DeviceShadowHandler:
         new_settings = payloadDict.get('state').get('settings')
 
         # remove unwanted keys (avoids external injection of unwanted keys)
-        unwanted_keys = set(new_settings) - SETTINGS_KEYS
+        # TODO handle unwanted_keys correctly, move settings to a separate module
+        # unwanted_keys = set(new_settings) - SETTINGS_KEYS
+        unwanted_keys = None
         for unwanted_key in unwanted_keys:
             del payloadDict["state"]["settings"][unwanted_key]
 
         # update parameters
-        settings.update(payloadDict.get('state').get('settings'))
+        self.settings.update(payloadDict.get('state').get('settings'))
 
         # report status back to AWSIoT
-        newPayload.update({"state": {"reported": {"settings": settings}}})
+        newPayload.update({"state": {"reported": {"settings": self.settings}}})
 
         # output syslog message
-        LOGGER.info("Settings updated: " + json.dumps(settings))
+        LOGGER.info("Settings updated: " + json.dumps(self.settings))
 
         # check for triggering
         newState = payloadDict.get('state').get('command')
@@ -131,7 +139,7 @@ class DeviceShadowHandler:
 
     # post all parameters as a shadow update
     def paramPost(self):
-        newPayload = {"state": {"reported": {"settings": settings}, "desired": None}}
+        newPayload = {"state": {"reported": {"settings": self.settings}, "desired": None}}
         self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
 
         return
