@@ -1,13 +1,17 @@
+#!/usr/bin/env python3
+"""Initiates connection to AWSIoT and provides helper functions
+"""
+
+# deviceshadowhandler.py
+#
+# by Darren Dunford
+
 import json
 import logging
 
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTShadowClient
 
-# setup logging and set log level according to ini file
-LOGGER = logging.getLogger("deviceshadowhandler")
-# TODO set log level according to an environment setting
-LOGGER.setLevel(logging.DEBUG)
-
+LOGGER = logging.getLogger(__name__)
 
 #
 #
