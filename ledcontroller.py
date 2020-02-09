@@ -18,6 +18,7 @@ import time
 import os
 import configparser
 import logging
+import logging.handlers
 import threading
 
 from rpi_ws281x import PixelStrip, Color
@@ -70,7 +71,7 @@ debugdict = config['debug']
 DEBUG = debugdict.getboolean('debug', fallback=False)  # if debug true then additional logging to syslog is enabled
 SYSLOG = debugdict.getboolean('syslog', fallback=True)  # if syslog is false then all output to syslog is suppressed
 
-# setup logging and set log level according to ini file
+# setup logging at root level and set log level according to ini file
 LOGGER = logging.getLogger("ledcontroller")
 if DEBUG:
     LOGGER.setLevel(logging.DEBUG)
@@ -78,6 +79,13 @@ elif SYSLOG:
     LOGGER.setLevel(logging.INFO)
 else:
     LOGGER.setLevel(logging.WARNING)
+
+# setup log handler to send messages to syslog
+sysloghandler = logging.handlers.SysLogHandler()
+sysloghandler.setLevel(DEBUG)  # set to most verbose level, handles all messages from LOGGER
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+sysloghandler.setFormatter(logging_formatter)
+LOGGER.addHandler(sysloghandler)
 
 # read parameters from ini file and build params dictionary
 globs = config['settings']
@@ -89,7 +97,7 @@ settings.update({'post_temperature_interval': globs.getint('post_temperature_int
 SETTINGS_KEYS = set(settings)
 
 # if debugging then dump params in to syslog
-LOGGER.info("Parameters loaded:" + json.dumps(settings, indent=2))
+LOGGER.info("Parameters loaded: %s", json.dumps(settings, indent=2))
 
 # Main program logic follows:
 if __name__ == '__main__':

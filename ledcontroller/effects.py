@@ -8,8 +8,10 @@
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
 
 import time
+import logging
 from rpi_ws281x import Color
 
+LOGGER = logging.getLogger(__name__)
 
 def color_wipe(strip, color, wait_ms: int = 50):
     """Wipe color across display a pixel at a time.
@@ -55,9 +57,8 @@ def wheel(pos: int):
     if pos < 170:
         pos -= 85
         return Color(255 - pos * 3, 0, pos * 3)
-    else:
-        pos -= 170
-        return Color(0, pos * 3, 255 - pos * 3)
+    pos -= 170
+    return Color(0, pos * 3, 255 - pos * 3)
 
 
 def rainbow(strip, wait_ms: int = 20, iterations: int = 1):
