@@ -8,6 +8,7 @@ LOGGER = logging.getLogger("deviceshadowhandler")
 # TODO set log level according to an environment setting
 LOGGER.setLevel(logging.DEBUG)
 
+
 #
 #
 # Define functions which implement AWSIoT integration
@@ -20,7 +21,7 @@ class DeviceShadowHandler:
 
         # create new JSON payload to update device shadow
         new_payload = {"state": {"reported": {"command": str(status), "sequencerun": None, "sequence": None},
-                                "desired": None}}
+                                 "desired": None}}
         if state:
             new_payload.update({"state": {"reported": state}})
 
@@ -30,13 +31,15 @@ class DeviceShadowHandler:
         # log to syslog
         LOGGER.info(status)
 
-        return
-
-
     # constructor
     def __init__(self, thingname, host, root_ca_path, private_key_path, certificate_path):
-        """Initiate connection to AWSIoT.
-        :rtype: object
+        """Initiate AWS IoT connection
+
+        :param thingname: AWSIoT thing name
+        :param host: AWSIoT endpoint FQDN
+        :param root_ca_path: local file path to Amazon root certificate
+        :param private_key_path: local file path to device private key
+        :param certificate_path: local file path to device certificate
         """
 
         # Init Shadow Client MQTT connection
@@ -70,9 +73,6 @@ class DeviceShadowHandler:
         self.trigger = 0
 
         self.settings = None
-
-        return
-
 
     # Custom shadow callback for delta -> remote triggering
     def customShadowCallback_Delta(self, payload, responseStatus, token):
@@ -120,7 +120,6 @@ class DeviceShadowHandler:
 
         # update shadow instance status
         self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
-
 
     # Custom Shadow callback for GET operations
     def customShadowCallback_Get(self, payload, responseStatus, token):

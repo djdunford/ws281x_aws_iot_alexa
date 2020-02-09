@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
-#
+"""Raspbian python app to control a WS281X LED string
+
+Controller for WS281x LED string
+with AWSIoT integration to allow remote control
+"""
+
 # ledcontroller.py
-#
-# Controller for WS281x LED string
-# with AWSIoT integration to allow remote control
 #
 # originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
 #
 # Author: Darren Dunford (djdunford@gmail.com)
-#
+
 import json
 import sys
 import time
-
-from rpi_ws281x import PixelStrip, Color
 import os
 import configparser
 import logging
 import threading
+
+from rpi_ws281x import PixelStrip, Color
 from gpiozero import CPUTemperature
 
 from deviceshadowhandler import DeviceShadowHandler
-from effects import colorWipe, theaterChase, rainbow, rainbowCycle, theaterChaseRainbow
+from effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -33,6 +35,7 @@ LED_DMA = 10  # DMA channel to use for generating signal (try 10)
 LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
 LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
+
 
 # define helper functions
 def post_temperature(interval=300):
@@ -46,6 +49,7 @@ def post_temperature(interval=300):
         cpu = CPUTemperature()
         device.tempPost(cpu.temperature)
         time.sleep(interval)
+
 
 # Change CWD to location of this script
 os.chdir(os.path.dirname(sys.argv[0]))
@@ -116,20 +120,17 @@ if __name__ == '__main__':
 
         while True:
             print('Color wipe animations.')
-            colorWipe(strip, Color(255, 0, 0))  # Red wipe
-            colorWipe(strip, Color(0, 255, 0))  # Blue wipe
-            colorWipe(strip, Color(0, 0, 255))  # Green wipe
+            color_wipe(strip, Color(255, 0, 0))  # Red wipe
+            color_wipe(strip, Color(0, 255, 0))  # Blue wipe
+            color_wipe(strip, Color(0, 0, 255))  # Green wipe
             print('Theater chase animations.')
-            theaterChase(strip, Color(127, 127, 127))  # White theater chase
-            theaterChase(strip, Color(127, 0, 0))  # Red theater chase
-            theaterChase(strip, Color(0, 0, 127))  # Blue theater chase
+            theater_chase(strip, Color(127, 127, 127))  # White theater chase
+            theater_chase(strip, Color(127, 0, 0))  # Red theater chase
+            theater_chase(strip, Color(0, 0, 127))  # Blue theater chase
             print('Rainbow animations.')
             rainbow(strip)
-            rainbowCycle(strip)
-            theaterChaseRainbow(strip)
+            rainbow_cycle(strip)
+            theater_chase_rainbow(strip)
 
     except KeyboardInterrupt:
-        colorWipe(strip, Color(0, 0, 0), 10)
-
-
-
+        color_wipe(strip, Color(0, 0, 0), 10)
