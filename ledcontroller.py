@@ -83,7 +83,7 @@ else:
 # setup log handler to send messages to syslog
 sysloghandler = logging.handlers.SysLogHandler(address='/dev/log')
 sysloghandler.setLevel(DEBUG)  # set to most verbose level, handles all messages from LOGGER
-logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+logging_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
 sysloghandler.setFormatter(logging_formatter)
 LOGGER.addHandler(sysloghandler)
 
