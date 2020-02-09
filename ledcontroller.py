@@ -23,8 +23,8 @@ import threading
 from rpi_ws281x import PixelStrip, Color
 from gpiozero import CPUTemperature
 
-from modules.deviceshadowhandler import DeviceShadowHandler
-from modules.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow
+from ledcontroller.deviceshadowhandler import DeviceShadowHandler
+from ledcontroller.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
