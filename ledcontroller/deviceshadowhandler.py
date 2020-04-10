@@ -72,8 +72,9 @@ class DeviceShadowHandler:
 
         # dictionary to hold callback responses
         # TODO: add logic to clear out stale entries, otherwise will become a memory leak
-        self.callbackresponses = {}
+        self._callbackresponses = {}
 
+        # callbacks in this class update this public instance variable with trigger commands received
         self.trigger = 0
 
         self.settings = None
@@ -134,11 +135,11 @@ class DeviceShadowHandler:
         :param token:
         :return:
         """
-        self.callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": responseStatus}})
+        self._callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": responseStatus}})
         return
 
     def getResponse(self, token):
-        return self.callbackresponses[token]
+        return self._callbackresponses[token]
 
     # post all parameters as a shadow update
     def paramPost(self):

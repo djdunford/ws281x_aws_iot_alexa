@@ -3,26 +3,23 @@
 
 Controller for WS281x LED string
 with AWSIoT integration to allow remote control
+
+originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
+see https://github.com/rpi-ws281x/rpi-ws281x-python
+
+Author: Darren Dunford (djdunford@gmail.com)
 """
 
-# ledcontroller.py
-#
-# originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
-# see https://github.com/rpi-ws281x/rpi-ws281x-python
-#
-# Author: Darren Dunford (djdunford@gmail.com)
-
-import json
-import sys
-import time
-import os
 import configparser
-import logging
+import json
 import logging.handlers
+import os
+import sys
 import threading
+import time
 
-from rpi_ws281x import PixelStrip, Color
 from gpiozero import CPUTemperature
+from rpi_ws281x import PixelStrip, Color
 
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
 from ledcontroller.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow
