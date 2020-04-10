@@ -30,7 +30,7 @@ class DeviceShadowHandler:
             new_payload.update({"state": {"reported": state}})
 
         # update shadow
-        self.shadowHandler.shadowUpdate(json.dumps(new_payload), None, 20)
+        self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 20)
 
         # log to syslog
         LOGGER.info(status)
@@ -47,25 +47,25 @@ class DeviceShadowHandler:
         """
 
         # Init Shadow Client MQTT connection
-        self.shadowClient = AWSIoTMQTTShadowClient(thingname)
-        self.shadowClient.configureEndpoint(host, 8883)
-        self.shadowClient.configureCredentials(root_ca_path, private_key_path, certificate_path)
+        self.shadow_client = AWSIoTMQTTShadowClient(thingname)
+        self.shadow_client.configureEndpoint(host, 8883)
+        self.shadow_client.configureCredentials(root_ca_path, private_key_path, certificate_path)
 
         # AWSIoTMQTTShadowClient configuration
-        self.shadowClient.configureAutoReconnectBackoffTime(1, 32, 20)
-        self.shadowClient.configureConnectDisconnectTimeout(20)  # 20 sec
-        self.shadowClient.configureMQTTOperationTimeout(20)  # 20 sec
+        self.shadow_client.configureAutoReconnectBackoffTime(1, 32, 20)
+        self.shadow_client.configureConnectDisconnectTimeout(20)  # 20 sec
+        self.shadow_client.configureMQTTOperationTimeout(20)  # 20 sec
 
         # force shadow client to use offline publish queueing
         # overriding the default behaviour for shadow clients in the SDK
-        mqtt_client = self.shadowClient.getMQTTConnection()
+        mqtt_client = self.shadow_client.getMQTTConnection()
         mqtt_client.configureOfflinePublishQueueing(-1)
 
         # Connect to AWS IoT with a 300 second keepalive
-        self.shadowClient.connect(300)
+        self.shadow_client.connect(300)
 
         # Create a deviceShadow with persistent subscription
-        self.shadowHandler = self.shadowClient.createShadowHandlerWithName(thingname, True)
+        self.shadow_handler = self.shadow_client.createShadowHandlerWithName(thingname, True)
 
         # initial status post
         self.status_post('STARTING')
@@ -124,7 +124,7 @@ class DeviceShadowHandler:
         LOGGER.info("Shadow update: " + json.dumps(newPayload))
 
         # update shadow instance status
-        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
+        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 5)
 
     # Custom Shadow callback for GET operations
     def customShadowCallback_Get(self, payload, responseStatus, token):
@@ -136,7 +136,6 @@ class DeviceShadowHandler:
         :return:
         """
         self._callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": responseStatus}})
-        return
 
     def getResponse(self, token):
         return self._callbackresponses[token]
@@ -144,29 +143,23 @@ class DeviceShadowHandler:
     # post all parameters as a shadow update
     def paramPost(self):
         newPayload = {"state": {"reported": {"settings": self.settings}, "desired": None}}
-        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 5)
-
-        return
+        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 5)
 
     # post state update to device shadow and, if enabled, syslog
     def statePost(self, state):
 
         # create new JSON payload to update device shadow
         newPayload = {"state": {"reported": {"command": state}, "desired": None}}
-        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 20)
+        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 20)
 
         # log to syslog
         LOGGER.info("New state" + json.dumps(state))
-
-        return
 
     def tempPost(self, temp):
 
         # create new JSON payload to send device temperature to shadow
         newPayload = {"state": {"reported": {"cputemp": temp}}}
-        self.shadowHandler.shadowUpdate(json.dumps(newPayload), None, 20)
+        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 20)
 
         # log to syslog on debug only
         LOGGER.debug("New temp payload " + json.dumps(newPayload))
-
-        return
