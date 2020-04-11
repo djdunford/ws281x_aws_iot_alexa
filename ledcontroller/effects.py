@@ -46,6 +46,11 @@ def bluelight(strip, flash_ms: int = 50, period_s: int = 600, wait_ms: int = 10)
                     strip.setPixelColor(i, Color(0, 0, 255))
                 else:
                     strip.setPixelColor(i, Color(0, 0, 0))
+            else:
+                if i < (strip.numPixels() // 2):
+                    strip.setPixelColor(i, Color(0, 0, 0))
+                else:
+                    strip.setPixelColor(i, Color(0, 0, 255))
         strip.show()
         time.sleep(wait_ms / 1000.0)
 
