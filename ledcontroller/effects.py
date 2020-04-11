@@ -27,6 +27,29 @@ def color_wipe(strip, color, wait_ms: int = 50):
         time.sleep(wait_ms / 1000.0)
 
 
+def bluelight(strip, flash_ms: int = 50, period_s: int = 600, wait_ms: int = 10):
+    """UK emergency vehicle blue light effect
+
+    :param strip:
+    :param flash_ms:
+    :param period_s:
+    :param wait_ms:
+    :return:
+    """
+
+    start_time = time.time()
+    while time.time() < start_time + period_s:
+        curr_time = int(time.time()) % 2
+        for i in range(strip.numPixels()):
+            if curr_time > 0:
+                if i < (strip.numPixels() // 2):
+                    strip.setPixelColor(i, Color(0, 0, 255))
+                else:
+                    strip.setPixelColor(i, Color(0, 0, 0))
+        strip.show()
+        time.sleep(wait_ms / 1000.0)
+
+
 def theater_chase(strip, color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
 
