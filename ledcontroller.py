@@ -118,6 +118,13 @@ if __name__ == '__main__':
         daemon=True)
     temperaturepost_thread.start()
 
+    # launch lights control thread
+    lights_thread = threading.Thread(
+        target=bluelight,
+        args=(strip,),
+        daemon=True)
+    lights_thread.start()
+
     try:
 
         # post RUNNING status
@@ -136,7 +143,8 @@ if __name__ == '__main__':
             # rainbow(strip)
             # rainbow_cycle(strip)
             # theater_chase_rainbow(strip)
-            bluelight(strip)
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
+        lights_thread
         color_wipe(strip, Color(0, 0, 0), 10)
