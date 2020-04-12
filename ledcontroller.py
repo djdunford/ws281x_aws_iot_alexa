@@ -22,7 +22,7 @@ from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip, Color
 
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow, bluelight
+from ledcontroller.effects import color_wipe, Lights
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -118,17 +118,14 @@ if __name__ == '__main__':
         daemon=True)
     temperaturepost_thread.start()
 
-    # launch lights control thread
-    lights_thread = threading.Thread(
-        target=bluelight,
-        args=(strip,),
-        daemon=True)
-    lights_thread.start()
-
     try:
 
+        # launch lights control thread
+        lights_thread: Lights = Lights(strip)
+        lights_thread.start()
+
         # post RUNNING status
-        device.status_post("RUNNING")
+        device.status_post("RUNNING BLUELIGHTS")
 
         while True:
             # print('Color wipe animations.')
@@ -146,5 +143,8 @@ if __name__ == '__main__':
             time.sleep(0.1)
 
     except KeyboardInterrupt:
-        lights_thread
+        device.status_post("STOPPING")
+        lights_thread.stop()
+        lights_thread.join()
         color_wipe(strip, Color(0, 0, 0), 10)
+        device.status_post("STOPPED")

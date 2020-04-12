@@ -9,9 +9,11 @@
 
 import time
 import logging
+import threading
 from rpi_ws281x import Color
 
 LOGGER = logging.getLogger(__name__)
+
 
 def color_wipe(strip, color, wait_ms: int = 50):
     """Wipe color across display a pixel at a time.
@@ -27,39 +29,60 @@ def color_wipe(strip, color, wait_ms: int = 50):
         time.sleep(wait_ms / 1000.0)
 
 
-def bluelight(strip, flash_ms: int = 50, period_s: int = 600, wait_ms: int = 10):
-    """UK emergency vehicle blue light effect
+class Lights(threading.Thread):
 
-    :param strip:
-    :param flash_ms:
-    :param period_s:
-    :param wait_ms:
-    :return:
-    """
+    def __init__(self, strip, sequence: int = 1):
+        """Initialise thread with strip object for LED strip
 
-    start_time = time.time()
-    while time.time() < start_time + period_s:
-        curr_time = time.time() * 2
-        for i in range(strip.numPixels()):
-            if int(curr_time % 2) > 0:
-                if i < (strip.numPixels() // 2):
-                    if (int(curr_time * 10) % 2) > 0:
-                        strip.setPixelColor(i, Color(0, 0, 255))
+        :param strip:
+        :param sequence:
+        """
+
+        threading.Thread.__init__(self)
+        self._shutdown_event = threading.Event()
+        self._strip = strip
+        self._sequence = sequence
+
+    def run(self, flash_ms: int = 50, period_s: int = 600, wait_ms: int = 10):
+        """UK emergency vehicle blue light effect
+
+        :param flash_ms:
+        :param period_s:
+        :param wait_ms:
+        :return:
+        """
+
+        start_time = time.time()
+        if self._sequence == 1:
+            while (time.time() < start_time + period_s) and not self._shutdown_event.is_set():
+                curr_time = time.time() * 2
+                for i in range(self._strip.numPixels()):
+                    if int(curr_time % 2) > 0:
+                        if i < (self._strip.numPixels() // 2):
+                            if (int(curr_time * 10) % 2) > 0:
+                                self._strip.setPixelColor(i, Color(0, 0, 255))
+                            else:
+                                self._strip.setPixelColor(i, Color(0, 0, 0))
+                        else:
+                            self._strip.setPixelColor(i, Color(0, 0, 0))
                     else:
-                        strip.setPixelColor(i, Color(0, 0, 0))
-                else:
-                    strip.setPixelColor(i, Color(0, 0, 0))
-            else:
-                if i < (strip.numPixels() // 2):
-                    strip.setPixelColor(i, Color(0, 0, 0))
-                else:
-                    if (int(curr_time * 10) % 2) > 0:
-                        strip.setPixelColor(i, Color(0, 0, 255))
-                    else:
-                        strip.setPixelColor(i, Color(0, 0, 0))
-        strip.show()
-        time.sleep(wait_ms / 1000.0)
+                        if i < (self._strip.numPixels() // 2):
+                            self._strip.setPixelColor(i, Color(0, 0, 0))
+                        else:
+                            if (int(curr_time * 10) % 2) > 0:
+                                self._strip.setPixelColor(i, Color(0, 0, 255))
+                            else:
+                                self._strip.setPixelColor(i, Color(0, 0, 0))
+                self._strip.show()
+                time.sleep(wait_ms / 1000.0)
 
+    def stop(self):
+        """Set stop flag for thread
+
+        :return:
+        """
+
+        self._shutdown_event.set()
 
 def theater_chase(strip, color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
