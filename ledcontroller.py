@@ -22,7 +22,7 @@ from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip, Color
 
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow
+from ledcontroller.effects import color_wipe, theater_chase, rainbow, rainbow_cycle, theater_chase_rainbow, bluelight
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -45,7 +45,7 @@ def post_temperature(interval=300):
     """
     while True:
         cpu = CPUTemperature()
-        device.tempPost(cpu.temperature)
+        device.post_temperature(cpu.temperature)
         time.sleep(interval)
 
 
@@ -124,18 +124,19 @@ if __name__ == '__main__':
         device.status_post("RUNNING")
 
         while True:
-            print('Color wipe animations.')
-            color_wipe(strip, Color(255, 0, 0))  # Red wipe
-            color_wipe(strip, Color(0, 255, 0))  # Blue wipe
-            color_wipe(strip, Color(0, 0, 255))  # Green wipe
-            print('Theater chase animations.')
-            theater_chase(strip, Color(127, 127, 127))  # White theater chase
-            theater_chase(strip, Color(127, 0, 0))  # Red theater chase
-            theater_chase(strip, Color(0, 0, 127))  # Blue theater chase
-            print('Rainbow animations.')
-            rainbow(strip)
-            rainbow_cycle(strip)
-            theater_chase_rainbow(strip)
+            # print('Color wipe animations.')
+            # color_wipe(strip, Color(255, 0, 0))  # Red wipe
+            # color_wipe(strip, Color(0, 255, 0))  # Blue wipe
+            # color_wipe(strip, Color(0, 0, 255))  # Green wipe
+            # print('Theater chase animations.')
+            # theater_chase(strip, Color(127, 127, 127))  # White theater chase
+            # theater_chase(strip, Color(127, 0, 0))  # Red theater chase
+            # theater_chase(strip, Color(0, 0, 127))  # Blue theater chase
+            # print('Rainbow animations.')
+            # rainbow(strip)
+            # rainbow_cycle(strip)
+            # theater_chase_rainbow(strip)
+            bluelight(strip)
 
     except KeyboardInterrupt:
         color_wipe(strip, Color(0, 0, 0), 10)

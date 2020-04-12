@@ -80,11 +80,11 @@ class DeviceShadowHandler:
         self.settings = None
 
     # Custom shadow callback for delta -> remote triggering
-    def customShadowCallback_Delta(self, payload, responseStatus, token):
+    def custom_shadow_callback_delta(self, payload, response_status, token):
         """
 
         :param payload: JSON string ready to be parsed using json.loads(...)
-        :param responseStatus:
+        :param response_status:
         :param token:
         """
 
@@ -92,74 +92,74 @@ class DeviceShadowHandler:
         LOGGER.debug(payload)
 
         # create JSON dictionary from payload
-        payloadDict = json.loads(payload)
-        newPayload = {"state": {"reported": {"status": "RUNNING"}, "desired": None}}
+        payload_dict = json.loads(payload)
+        new_payload = {"state": {"reported": {"status": "RUNNING"}, "desired": None}}
 
         # check for parameter update
-        new_settings = payloadDict.get('state').get('settings')
+        new_settings = payload_dict.get('state').get('settings')
 
         # remove unwanted keys (avoids external injection of unwanted keys)
         # TODO handle unwanted_keys correctly, move settings to a separate module
         # unwanted_keys = set(new_settings) - SETTINGS_KEYS
         unwanted_keys = None
         for unwanted_key in unwanted_keys:
-            del payloadDict["state"]["settings"][unwanted_key]
+            del payload_dict["state"]["settings"][unwanted_key]
 
         # update parameters
-        self.settings.update(payloadDict.get('state').get('settings'))
+        self.settings.update(payload_dict.get('state').get('settings'))
 
         # report status back to AWSIoT
-        newPayload.update({"state": {"reported": {"settings": self.settings}}})
+        new_payload.update({"state": {"reported": {"settings": self.settings}}})
 
         # output syslog message
         LOGGER.info("Settings updated: " + json.dumps(self.settings))
 
         # check for triggering
-        newState = payloadDict.get('state').get('command')
-        if newState == "TRIGGER":
-            self.trigger = int(payloadDict.get('state').get('sequence', 0))
-            newPayload.update({"state": {
+        new_state = payload_dict.get('state').get('command')
+        if new_state == "TRIGGER":
+            self.trigger = int(payload_dict.get('state').get('sequence', 0))
+            new_payload.update({"state": {
                 "reported": {"command": "TRIGGERED", "sequencerun": self.trigger, "sequence": None}}})
 
-        LOGGER.info("Shadow update: " + json.dumps(newPayload))
+        LOGGER.info("Shadow update: " + json.dumps(new_payload))
 
         # update shadow instance status
-        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 5)
+        self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 5)
 
     # Custom Shadow callback for GET operations
-    def customShadowCallback_Get(self, payload, responseStatus, token):
+    def custom_shadow_callback_get(self, payload, response_status, token):
         """
 
         :param payload:
-        :param responseStatus:
+        :param response_status:
         :param token:
         :return:
         """
-        self._callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": responseStatus}})
+        self._callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": response_status}})
 
-    def getResponse(self, token):
+    def get_response(self, token):
         return self._callbackresponses[token]
 
     # post all parameters as a shadow update
-    def paramPost(self):
-        newPayload = {"state": {"reported": {"settings": self.settings}, "desired": None}}
-        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 5)
+    def post_param(self):
+        new_payload = {"state": {"reported": {"settings": self.settings}, "desired": None}}
+        self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 5)
 
     # post state update to device shadow and, if enabled, syslog
-    def statePost(self, state):
+    def post_state(self, state):
 
         # create new JSON payload to update device shadow
-        newPayload = {"state": {"reported": {"command": state}, "desired": None}}
-        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 20)
+        new_payload = {"state": {"reported": {"command": state}, "desired": None}}
+        self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 20)
 
         # log to syslog
         LOGGER.info("New state" + json.dumps(state))
 
-    def tempPost(self, temp):
+    def post_temperature(self, temp):
 
         # create new JSON payload to send device temperature to shadow
-        newPayload = {"state": {"reported": {"cputemp": temp}}}
-        self.shadow_handler.shadowUpdate(json.dumps(newPayload), None, 20)
+        new_payload = {"state": {"reported": {"cputemp": temp}}}
+        self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 20)
 
         # log to syslog on debug only
-        LOGGER.debug("New temp payload " + json.dumps(newPayload))
+        LOGGER.debug("New temp payload " + json.dumps(new_payload))
