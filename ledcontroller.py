@@ -45,7 +45,7 @@ def post_temperature(interval=300):
     """
     while True:
         cpu = CPUTemperature()
-        device.tempPost(cpu.temperature)
+        device.post_temperature(cpu.temperature)
         time.sleep(interval)
 
 
