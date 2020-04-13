@@ -22,7 +22,7 @@ from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip, Color
 
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, Lights
+from ledcontroller.effects import color_wipe, LightSequence
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     try:
 
         # launch lights control thread
-        lights_thread: Lights = Lights(strip)
+        lights_thread: LightSequence = LightSequence(strip, 2)
         lights_thread.start()
 
         # post RUNNING status

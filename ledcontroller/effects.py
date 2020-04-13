@@ -10,10 +10,18 @@
 import time
 import logging
 import threading
-from rpi_ws281x import Color
 
 LOGGER = logging.getLogger(__name__)
 
+def Color(red, green, blue, white=0):
+    """Convert the provided red, green, blue color to a 24-bit color value.
+    Each color component should be a value 0-255 where 0 is the lowest intensity
+    and 255 is the highest intensity.
+
+    Note the sequencing has been changed from RGB (most significant->least significant) to
+    GRB - this seems to be a "feature" of the light strip I have!
+    """
+    return (white << 24) | (green << 16) | (red << 8) | blue
 
 def color_wipe(strip, color, wait_ms: int = 50):
     """Wipe color across display a pixel at a time.
@@ -29,7 +37,7 @@ def color_wipe(strip, color, wait_ms: int = 50):
         time.sleep(wait_ms / 1000.0)
 
 
-class Lights(threading.Thread):
+class LightSequence(threading.Thread):
 
     def __init__(self, strip, sequence: int = 1):
         """Initialise thread with strip object for LED strip
@@ -38,23 +46,22 @@ class Lights(threading.Thread):
         :param sequence:
         """
 
-        threading.Thread.__init__(self)
-        self._shutdown_event = threading.Event()
-        self._strip = strip
-        self._sequence = sequence
+        threading.Thread.__init__(self)             # call parent constructor
+        self._shutdown_event = threading.Event()    # set event flag to terminate thread
+        self._strip = strip                         # set to rpi_ws281x.PixelStrip object for LED strip to control
+        self._sequence = sequence                   # set to desired sequence
 
-    def run(self, flash_ms: int = 50, period_s: int = 600, wait_ms: int = 10):
-        """UK emergency vehicle blue light effect
+    def run(self):
+        """Run light effect selected by sequence number passed to constructor
 
-        :param flash_ms:
-        :param period_s:
-        :param wait_ms:
         :return:
         """
 
         start_time = time.time()
+
+        # UK emergency blue light effect
         if self._sequence == 1:
-            while (time.time() < start_time + period_s) and not self._shutdown_event.is_set():
+            while not self._shutdown_event.is_set():
                 curr_time = time.time() * 2
                 for i in range(self._strip.numPixels()):
                     if int(curr_time % 2) > 0:
@@ -74,7 +81,27 @@ class Lights(threading.Thread):
                             else:
                                 self._strip.setPixelColor(i, Color(0, 0, 0))
                 self._strip.show()
-                time.sleep(wait_ms / 1000.0)
+                time.sleep(0.01)
+
+        # Static rainbow effect (requires LED strip of 50 LEDs)
+        elif self._sequence == 2:
+            rainbow = [Color(255,0,0),
+                       Color(255,127,0),
+                       Color(255,255,0),
+                       Color(0,255,0),
+                       Color(0,0,255),
+                       Color(46,43,95),
+                       Color(139,0,255)]
+            length = len(rainbow)
+            for i in range(length):
+                self._strip.setPixelColor(4+(i*3),rainbow[i])
+                self._strip.setPixelColor(5+(i*3),rainbow[i])
+                self._strip.setPixelColor(6+(i*3),rainbow[i])
+                self._strip.setPixelColor(22+((length-i)*3),rainbow[i])
+                self._strip.setPixelColor(23+((length-i)*3),rainbow[i])
+                self._strip.setPixelColor(24+((length-i)*3),rainbow[i])
+
+            self._strip.show()
 
     def stop(self):
         """Set stop flag for thread
@@ -83,6 +110,7 @@ class Lights(threading.Thread):
         """
 
         self._shutdown_event.set()
+
 
 def theater_chase(strip, color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
