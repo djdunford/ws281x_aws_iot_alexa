@@ -129,4 +129,9 @@ dmypy.json
 .pyre/
 
 # configuration (ini) file
-ledcontroller.ini
+device_client/ledcontroller.ini
+
+# JetBrains project files
+*.iml
+device_client/*.iml
+.idea/

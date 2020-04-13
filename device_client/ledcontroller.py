@@ -121,7 +121,7 @@ if __name__ == '__main__':
     try:
 
         # launch lights control thread
-        lights_thread: LightSequence = LightSequence(strip, 2)
+        lights_thread: LightSequence = LightSequence(strip, 1)
         lights_thread.start()
 
         # post RUNNING status
