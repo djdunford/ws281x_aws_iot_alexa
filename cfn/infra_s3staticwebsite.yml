@@ -6,7 +6,7 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
-      BucketName: "{{resolve:ssm:URL_LEDSTRIP:1}}"
+      BucketName: "{{resolve:ssm:LEDSTRIP_URL:1}}"
 
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -32,7 +32,7 @@ Resources:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub 'CloudFront OAI for {{resolve:ssm:URL_LEDSTRIP:1}}'
+        Comment: !Sub 'CloudFront OAI for {{resolve:ssm:LEDSTRIP_URL:1}}'
 
   myDistribution:
     Type: AWS::CloudFront::Distribution
@@ -49,7 +49,7 @@ Resources:
         DefaultRootObject: index.html
         HttpVersion: http2
         Aliases:
-          - "{{resolve:ssm:URL_LEDSTRIP:1}}"
+          - "{{resolve:ssm:LEDSTRIP_URL:1}}"
         CustomErrorResponses:
           - ErrorCachingMinTTL: 604800
             ErrorCode: 403
@@ -83,7 +83,7 @@ Resources:
         ViewerCertificate:
           SslSupportMethod: sni-only
           MinimumProtocolVersion: "TLSv1.1_2016"
-          AcmCertificateArn: "{{resolve:ssm:CERT_LEDSTRIP_ARN:1}}"
+          AcmCertificateArn: "{{resolve:ssm:LEDSTRIP_CERT:1}}"
 
 Outputs:
   WebsiteURL:
