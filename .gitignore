@@ -133,5 +133,7 @@ device_client/ledcontroller.ini
 
 # JetBrains project files
 *.iml
-device_client/*.iml
 .idea/
+
+# cfn parameter files
+param_*.json
