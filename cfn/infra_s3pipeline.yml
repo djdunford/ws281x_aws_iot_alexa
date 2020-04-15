@@ -295,7 +295,7 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 StackName:
                   Fn::Sub: S3Bucket-${AWS::StackName}
-                TemplatePath: SourceOutput::cfn/infra_s3pipeline.yml
+                TemplatePath: SourceOutput::cfn/infra_s3staticwebsite.yml
 #                TemplateConfiguration: SourceOutput::param-basevpc.json
               RunOrder: 1
       ArtifactStore:
