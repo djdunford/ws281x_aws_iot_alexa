@@ -32,7 +32,7 @@ Resources:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub 'CloudFront OAI for {{resolve:ssm:LEDSTRIP_URL:1}}'
+        Comment: "CloudFront OAI for {{resolve:ssm:LEDSTRIP_URL:1}}"
 
   myDistribution:
     Type: AWS::CloudFront::Distribution

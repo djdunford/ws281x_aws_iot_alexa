@@ -1,4 +1,6 @@
-Description: CodePipeline for LedStrip infra_s3staticwebsite.yml
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CodePipeline for LedStrip infra_s3staticwebsite.yaml
 
 Parameters:
   BranchName:
@@ -13,10 +15,10 @@ Parameters:
     Description: Name of the S3 bucket to store CodePipeline artificat.
 
 Resources:
-  S3Bucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref ArtifactStoreS3Location
+#  S3Bucket:
+#    Type: AWS::S3::Bucket
+#    Properties:
+#      BucketName: !Ref ArtifactStoreS3Location
   CodePipelineRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -232,10 +234,10 @@ Resources:
                 -
                   Name: SourceOutput
               Configuration:
-                Owner: '{{resolve:ssm:LEDSTRIP_GITHUB_USERNAME:1}}'
+                Owner: '{{resolve:ssm:GITHUB_USERNAME:1}}'
                 Repo: '{{resolve:ssm:LEDSTRIP_GITHUB_REPO:1}}'
                 Branch: !Ref BranchName
-                OAuthToken: '{{resolve:ssm:LEDSTRIP_GITHUB_OAUTHTOKEN:1}}'
+                OAuthToken: '{{resolve:ssm:GITHUB_OAUTHTOKEN:1}}'
                 PollForSourceChanges: false
               RunOrder: 1
 #        -
@@ -275,7 +277,7 @@ Resources:
           Name: BuildCFN
           Actions:
             -
-              Name: CreateUpdateVPCStack
+              Name: CreateUpdateStaticWebsite
               InputArtifacts:
                 -
                   Name: SourceOutput
@@ -295,8 +297,31 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 StackName:
                   Fn::Sub: S3Bucket-${AWS::StackName}
-                TemplatePath: SourceOutput::cfn/infra_s3staticwebsite.yml
+                TemplatePath: SourceOutput::cfn/infra_s3staticwebsite.yaml
 #                TemplateConfiguration: SourceOutput::param-basevpc.json
+              RunOrder: 1
+            -
+              Name: CreateUpdateCognitoIdentityPool
+              InputArtifacts:
+                -
+                  Name: SourceOutput
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: "1"
+                Provider: CloudFormation
+              OutputArtifacts:
+                -
+                  Name:
+                    Fn::Sub: Cognito-${AWS::StackName}
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn:
+                  Fn::GetAtt: [ CloudFormationRole, Arn ]
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName:
+                  Fn::Sub: Cognito-${AWS::StackName}
+                TemplatePath: SourceOutput::cfn/infra_cognito.yaml
               RunOrder: 1
       ArtifactStore:
         Type: S3
