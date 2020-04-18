@@ -137,3 +137,4 @@ device_client/ledcontroller.ini
 
 # cfn parameter files
 param_*.json
+/ledcontroller.ini
