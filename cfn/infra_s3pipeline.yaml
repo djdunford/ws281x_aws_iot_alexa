@@ -12,13 +12,26 @@ Parameters:
     NoEcho: true
   ArtifactStoreS3Location:
     Type: String
-    Description: Name of the S3 bucket to store CodePipeline artificat.
+    Description: Name of the S3 bucket to store CodePipeline artifacts
+  CreateArtifactStore:
+    Type: String
+    Description: set to yes to create S3 bucket
+    Default: no
+    AllowedValues:
+      - yes
+      - no
+    ConstraintDescription: must be yes or no
+
+Conditions:
+  CreateArtifactStoreCondition: !Equals [ !Ref CreateArtifactStore, yes ]
 
 Resources:
-#  S3Bucket:
-#    Type: AWS::S3::Bucket
-#    Properties:
-#      BucketName: !Ref ArtifactStoreS3Location
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ArtifactStoreS3Location
+    Condition: CreateArtifactStoreCondition
+
   CodePipelineRole:
     Type: "AWS::IAM::Role"
     Properties:
