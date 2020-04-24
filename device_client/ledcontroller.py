@@ -120,12 +120,25 @@ if __name__ == '__main__':
 
     try:
 
-        # launch lights control thread
-        lights_thread: LightSequence = LightSequence(strip, 1)
-        lights_thread.start()
+        for i in range(4):
+            lights_thread: LightSequence = LightSequence(strip, 1)
+            lights_thread.start()
+            device.status_post("RUNNING BLUELIGHTS")
+            time.sleep(60)
+            lights_thread.stop()
+            lights_thread.join()
 
-        # post RUNNING status
-        device.status_post("RUNNING BLUELIGHTS")
+            lights_thread: LightSequence = LightSequence(strip, 3)
+            lights_thread.start()
+            device.status_post("RUNNING RAINBOW")
+            time.sleep(60)
+            lights_thread.stop()
+            lights_thread.join()
+
+        lights_thread: LightSequence = LightSequence(strip, 3)
+        lights_thread.start()
+        device.status_post("RUNNING RAINBOW FOREVER")
+
 
         while True:
             # print('Color wipe animations.')

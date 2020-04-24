@@ -103,6 +103,19 @@ class LightSequence(threading.Thread):
 
             self._strip.show()
 
+        elif self._sequence == 3:
+            # def rainbow_cycle(strip, wait_ms: int = 20, iterations: int = 5):
+
+            wait_ms: int = 20
+
+            while not self._shutdown_event.is_set():
+                for j in range(256):
+                    for i in range(self._strip.numPixels()):
+                        self._strip.setPixelColor(i, wheel(
+                            (int(i * 256 / self._strip.numPixels()) + j) & 255))
+                    self._strip.show()
+                    time.sleep(wait_ms / 1000.0)
+
     def stop(self):
         """Set stop flag for thread
 
