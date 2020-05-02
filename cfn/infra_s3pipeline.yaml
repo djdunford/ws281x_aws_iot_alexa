@@ -1,0 +1,359 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CodePipeline for LedStrip infra_s3staticwebsite.yaml
+
+Parameters:
+  BranchName:
+    Description: GitHub branch name
+    Type: String
+    Default: master
+  GitHubSecret:
+    Type: String
+    NoEcho: true
+  ArtifactStoreS3Location:
+    Type: String
+    Description: Name of the S3 bucket to store CodePipeline artifacts
+  CreateArtifactStore:
+    Type: String
+    Description: set to yes to create S3 bucket
+    Default: no
+    AllowedValues:
+      - yes
+      - no
+    ConstraintDescription: must be yes or no
+
+Conditions:
+  CreateArtifactStoreCondition: !Equals [ !Ref CreateArtifactStore, yes ]
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ArtifactStoreS3Location
+    Condition: CreateArtifactStoreCondition
+
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName:
+        Fn::Sub: CodePipelineRole-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      Policies:
+        -
+          PolicyName: "CodePipelineNestedCFNAccessPolicy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: "*"
+                Condition:
+                  StringEqualsIfExists:
+                    iam:PassedToService:
+                      - cloudformation.amazonaws.com
+                      - elasticbeanstalk.amazonaws.com
+                      - ec2.amazonaws.com
+                      - ecs-tasks.amazonaws.com
+                      - codebuild.amazonaws.com
+              -
+                Effect: Allow
+                Action:
+                  - opsworks:DescribeStacks
+                  - devicefarm:GetRun
+                  - rds:*
+                  - cloudformation:CreateChangeSet
+                  - autoscaling:*
+                  - codebuild:BatchGetBuilds
+                  - devicefarm:ScheduleRun
+                  - servicecatalog:ListProvisioningArtifacts
+                  - devicefarm:ListDevicePools
+                  - cloudformation:UpdateStack
+                  - servicecatalog:DescribeProvisioningArtifact
+                  - cloudformation:DescribeChangeSet
+                  - devicefarm:ListProjects
+                  - cloudformation:ExecuteChangeSet
+                  - sns:*
+                  - lambda:ListFunctions
+                  - codedeploy:RegisterApplicationRevision
+                  - lambda:InvokeFunction
+                  - opsworks:DescribeDeployments
+                  - devicefarm:CreateUpload
+                  - cloudformation:*
+                  - cloudformation:DescribeStacks
+                  - codecommit:GetUploadArchiveStatus
+                  - cloudwatch:*
+                  - opsworks:DescribeInstances
+                  - cloudformation:DeleteStack
+                  - ecr:DescribeImages
+                  - ecs:*
+                  - ec2:*
+                  - codebuild:StartBuild
+                  - opsworks:DescribeApps
+                  - opsworks:UpdateStack
+                  - cloudformation:ValidateTemplate
+                  - codedeploy:CreateDeployment
+                  - codedeploy:GetApplicationRevision
+                  - codedeploy:GetDeploymentConfig
+                  - sqs:*
+                  - servicecatalog:CreateProvisioningArtifact
+                  - cloudformation:DeleteChangeSet
+                  - codecommit:GetCommit
+                  - servicecatalog:DeleteProvisioningArtifact
+                  - codedeploy:GetApplication
+                  - cloudformation:SetStackPolicy
+                  - codecommit:UploadArchive
+                  - s3:*
+                  - elasticloadbalancing:*
+                  - codecommit:CancelUploadArchive
+                  - devicefarm:GetUpload
+                  - elasticbeanstalk:*
+                  - opsworks:UpdateApp
+                  - opsworks:CreateDeployment
+                  - cloudformation:CreateStack
+                  - codecommit:GetBranch
+                  - servicecatalog:UpdateProduct
+                  - codedeploy:GetDeployment
+                  - opsworks:DescribeCommands
+                Resource: "*"
+
+  CloudFormationRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName:
+        Fn::Sub: CloudFormationRole-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "cloudformation.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      Policies:
+        -
+          PolicyName: "CodePipelineInvokedCFNAccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "iam:*"
+                  - "lambda:*"
+                  - "s3:*"
+                  - "apigateway:*"
+                  - "ssm:Describe*"
+                  - "ssm:Get*"
+                  - "ssm:List*"
+                  - "cloudfront:*"
+                  - "cognito-identity:*"
+                  - "cognito-idp:DescribeUserPoolDomain"
+                  - "cognito-idp:CreateUserPool"
+                  - "cognito-sync:QueryRecords"
+                  - "cognito-idp:ListUserPools"
+                  - "cognito-sync:*"
+                  - "cognito-idp:*"
+                  - "cloudformation:*"
+                Resource:
+                  - "*"
+
+#  CodeBuildRole:
+#    Type: "AWS::IAM::Role"
+#    Properties:
+#      RoleName:
+#        Fn::Sub: CodeBuildRole-${AWS::StackName}
+#      AssumeRolePolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          -
+#            Effect: "Allow"
+#            Principal:
+#              Service:
+#                - "codebuild.amazonaws.com"
+#            Action:
+#              - "sts:AssumeRole"
+#      Path: /service-role/
+#      Policies:
+#        -
+#          PolicyName: "CodeBuildNestedCFNAccessPolicy"
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#              -
+#                Effect: "Allow"
+#                Action:
+#                  - "ec2:DescribeAccountAttributes"
+#                  - "ec2:DescribeVpcs"
+#                  - "ec2:DescribeRouteTables"
+#                  - "ec2:DescribeInternetGateways"
+#                  - "ec2:DescribeSubnets"
+#                  - "ec2:DescribeAddresses"
+#                  - "ec2:DescribeInstances"
+#                  - "ec2:DescribeKeyPairs"
+#                  - "ec2:DescribeAvailabilityZones"
+#                  - "ec2:DescribeSecurityGroups"
+#                  - "cloudformation:ValidateTemplate"
+#                  - "iam:GetRole"
+#                  - "iam:GetRolePolicy"
+#                  - "logs:CreateLogStream"
+#                  - "logs:CreateLogGroup"
+#                  - "logs:PutLogEvents"
+#                Resource:
+#                  - "*"
+#              -
+#                Effect: "Allow"
+#                Action:
+#                  - "s3:PutObject"
+#                  - "s3:GetObject"
+#                  - "s3:GetObjectVersion"
+#                  - "s3:ListBucket"
+#                Resource:
+#                  - Fn::Sub: arn:aws:s3:::codepipeline-${AWS::Region}-*
+#                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}/*
+#                  - Fn::Sub: arn:aws:s3:::${ArtifactStoreS3Location}
+
+  DeployPipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      Name:
+        Fn::Sub: CodePipeline-${AWS::StackName}
+      RoleArn:
+        Fn::GetAtt: [ CodePipelineRole, Arn ]
+      Stages:
+        -
+          Name: GitHubSource
+          Actions:
+            - Name: FetchFromGithub
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: "1"
+                Provider: GitHub
+              OutputArtifacts:
+                -
+                  Name: SourceOutput
+              Configuration:
+                Owner: '{{resolve:ssm:GITHUB_USERNAME:1}}'
+                Repo: '{{resolve:ssm:LEDSTRIP_GITHUB_REPO:1}}'
+                Branch: !Ref BranchName
+                OAuthToken: '{{resolve:ssm:GITHUB_OAUTHTOKEN:1}}'
+                PollForSourceChanges: false
+              RunOrder: 1
+#        -
+#          Name: ValidateCFN
+#          Actions:
+#            -
+#              Name: ValidateCFNTemplates
+#              InputArtifacts:
+#                - Name: SourceOutput
+#              ActionTypeId:
+#                Category: Test
+#                Owner: AWS
+#                Version: "1"
+#                Provider: CodeBuild
+#              OutputArtifacts:
+#                -
+#                  Name: ValidatedOutput
+#              Configuration:
+#                ProjectName: !Ref ValidateCFNProject
+#              RunOrder: 1
+#            -
+#              Name: NagCFNTemplates
+#              InputArtifacts:
+#                - Name: SourceOutput
+#              ActionTypeId:
+#                Category: Test
+#                Owner: AWS
+#                Version: "1"
+#                Provider: CodeBuild
+#              OutputArtifacts:
+#                -
+#                  Name: NagOutput
+#              Configuration:
+#                ProjectName: !Ref NagCFNProject
+#              RunOrder: 1
+        -
+          Name: BuildCFN
+          Actions:
+            -
+              Name: CreateUpdateStaticWebsite
+              InputArtifacts:
+                -
+                  Name: SourceOutput
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: "1"
+                Provider: CloudFormation
+              OutputArtifacts:
+                -
+                  Name:
+                    Fn::Sub: S3Bucket-${AWS::StackName}
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn:
+                  Fn::GetAtt: [ CloudFormationRole, Arn ]
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName:
+                  Fn::Sub: S3Bucket-${AWS::StackName}
+                TemplatePath: SourceOutput::cfn/infra_s3staticwebsite.yaml
+#                TemplateConfiguration: SourceOutput::param-basevpc.json
+              RunOrder: 1
+            -
+              Name: CreateUpdateCognitoIdentityPool
+              InputArtifacts:
+                -
+                  Name: SourceOutput
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: "1"
+                Provider: CloudFormation
+              OutputArtifacts:
+                -
+                  Name:
+                    Fn::Sub: Cognito-${AWS::StackName}
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn:
+                  Fn::GetAtt: [ CloudFormationRole, Arn ]
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName:
+                  Fn::Sub: Cognito-${AWS::StackName}
+                TemplatePath: SourceOutput::cfn/infra_cognito.yaml
+              RunOrder: 1
+      ArtifactStore:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreS3Location
+
+  AppPipelineWebhook:
+    Type: 'AWS::CodePipeline::Webhook'
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubSecret
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: 'refs/heads/{Branch}'
+      TargetPipeline: !Ref DeployPipeline
+      TargetAction: FetchFromGithub
+      Name: !Sub 'PipelineWebhook-${AWS::StackName}'
+      TargetPipelineVersion: !GetAtt
+        - DeployPipeline
+        - Version
+      RegisterWithThirdParty: true

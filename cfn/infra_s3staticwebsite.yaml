@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: "{{resolve:ssm:LEDSTRIP_URL:1}}"
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt OAI.S3CanonicalUserId
+            Action:
+              - s3:GetObject
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - /*
+      Bucket: !Ref S3Bucket
+
+  OAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "CloudFront OAI for {{resolve:ssm:LEDSTRIP_URL:1}}"
+
+  myDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName:
+              !Join [ "", [ !Ref S3Bucket, ".s3.amazonaws.com" ] ]
+            Id: myS3Origin
+            S3OriginConfig:
+              OriginAccessIdentity:
+                !Join [ "", [ "origin-access-identity/cloudfront/", !Ref OAI ] ]
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        Aliases:
+          - "{{resolve:ssm:LEDSTRIP_URL:1}}"
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: 604800
+            ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: "/index.html"
+          - ErrorCachingMinTTL: 604800
+            ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: "/index.html"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: false
+          DefaultTTL: 1209600
+          TargetOriginId: myS3Origin
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: all
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: "TLSv1.1_2016"
+          AcmCertificateArn: "{{resolve:ssm:LEDSTRIP_CERT:1}}"
+
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt
+      - S3Bucket
+      - WebsiteURL
+    Description: URL for website hosted on S3
+  S3BucketSecureURL:
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !GetAtt
+          - S3Bucket
+          - DomainName
+    Description: Name of S3 bucket to hold website content

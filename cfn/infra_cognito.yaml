@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: "ledstripwebclient"
+      GenerateSecret: false
+      UserPoolId: !ImportValue CognitoUserPoolId
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+
+#  UserPoolClientAlexa:
+#    Type: AWS::Cognito::UserPoolClient
+#    Properties:
+#      AllowedOAuthFlows:
+#        - "code"
+#      AllowedOAuthFlowsUserPoolClient: True
+#      AllowedOAuthScopes:
+#        - "phone"
+#        - "email"
+#        - "openid"
+#      ClientName: "ledstripalexaclient"
+#      CallbackURLs:
+#        - !Join
+#          - ""
+#          - - "https://alexa.amazon.co.jp/api/skill/link/"
+#            - "{{resolve:ssm:ALEXA_ENDPOINT:1}}"
+#        - !Join
+#          - ""
+#          - - "https://layla.amazon.com/api/skill/link/"
+#            - "{{resolve:ssm:ALEXA_ENDPOINT:1}}"
+#        - !Join
+#          - ""
+#          - - "https://pitangui.amazon.com/api/skill/link/"
+#            - "{{resolve:ssm:ALEXA_ENDPOINT:1}}"
+#      LogoutURLs:
+#        - "https://idp.debsanddarren.com/logout?response_type=code"
+#      RefreshTokenValidity: 3650
+#      GenerateSecret: True
+#      SupportedIdentityProviders:
+#        - "COGNITO"
+#      UserPoolId: !ImportValue CognitoUserPoolId
+
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ServerSideTokenCheck: true
+          ClientId: !Ref UserPoolClient
+          ProviderName: !ImportValue CognitoUserPoolProviderName
+      IdentityPoolName: !Sub ${AWS::StackName}IdentityPool
+
+  IdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthorizedRole.Arn
+
+  CognitoAuthorizedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Federated: "cognito-identity.amazonaws.com"
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals:
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": authenticated
+      Policies:
+        - PolicyName: "CognitoAuthorizedPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "mobileanalytics:PutEvents"
+                  - "cognito-sync:*"
+                  - "cognito-identity:*"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "execute-api:*"
+                Resource: "*"
