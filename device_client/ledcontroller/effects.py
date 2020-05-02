@@ -116,6 +116,19 @@ class LightSequence(threading.Thread):
                     self._strip.show()
                     time.sleep(wait_ms / 1000.0)
 
+        elif self._sequence == 4:
+
+            while not self._shutdown_event.is_set():
+                for i in range(self._strip.numPixels()):
+                    self._strip.setPixelColor(i,Color(200,200,200))
+                self._strip.show()
+                time.sleep(0.05)
+                for i in range(self._strip.numPixels()):
+                    if (i % 2) == 0:
+                        self._strip.setPixelColor(i,Color(0,0,0))
+                self._strip.show()
+                time.sleep(0.95)
+
     def stop(self):
         """Set stop flag for thread
 
