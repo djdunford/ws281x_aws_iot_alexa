@@ -17,12 +17,10 @@ import os
 import sys
 import threading
 import time
-
 from gpiozero import CPUTemperature
-from rpi_ws281x import PixelStrip, Color
-
+from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, LightSequence
+from ledcontroller.effects import color_wipe, LightSequence, Color
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -36,11 +34,11 @@ LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
 
 # define helper functions
-def post_temperature(interval=300):
+def post_temperature(interval: int=300):
     """
     thread safe daemon function posts temperature every interval seconds
 
-    :type interval: int
+    :param interval:
     :return:
     """
     while True:
@@ -137,7 +135,7 @@ if __name__ == '__main__':
 
         lights_thread: LightSequence = LightSequence(strip, 3)
         lights_thread.start()
-        device.status_post("RUNNING RAINBOW FOREVER")
+        device.status_post("RUNNING RAINBOW")
 
 
         while True:
