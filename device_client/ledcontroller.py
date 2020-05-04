@@ -17,10 +17,12 @@ import os
 import sys
 import threading
 import time
+import yaml
 from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, LightSequence, Color
+from ledcontroller.effects import color_wipe, LightEffect, Color
+from exceptions import InterruptException, ExitException
 
 # LED strip configuration:
 LED_COUNT = 50  # Number of LED pixels.
@@ -47,55 +49,55 @@ def post_temperature(interval: int=300):
         time.sleep(interval)
 
 
-# Change CWD to location of this script
-os.chdir(os.path.dirname(sys.argv[0]))
-
-# read config file and settings
-config = configparser.ConfigParser()
-config.read('ledcontroller.ini')
-
-# retrieve AWSIoT settings from config file
-AWSIOT_PRIVATE_KEY_PATH = config['aws']['privatekeypath']
-AWSIOT_CERTIFICATE_PATH = config['aws']['certificatepath']
-AWSIOT_HOST = config['aws']['host']
-AWSIOT_ROOT_CA_PATH = config['aws']['rootcapath']
-AWSIOT_THINGNAME = config['aws']['thingname']
-
-# debug flag
-debugdict = config['debug']
-DEBUG = debugdict.getboolean('debug', fallback=False)  # if debug true then additional logging to syslog is enabled
-SYSLOG = debugdict.getboolean('syslog', fallback=True)  # if syslog is false then all output to syslog is suppressed
-
-# setup logging at root level and set log level according to ini file
-LOGGER = logging.getLogger("ledcontroller")
-if DEBUG:
-    LOGGER.setLevel(logging.DEBUG)
-elif SYSLOG:
-    LOGGER.setLevel(logging.INFO)
-else:
-    LOGGER.setLevel(logging.WARNING)
-
-# setup log handler to send messages to syslog
-sysloghandler = logging.handlers.SysLogHandler(address='/dev/log')
-sysloghandler.setLevel(DEBUG)  # set to most verbose level, handles all messages from LOGGER
-logging_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
-sysloghandler.setFormatter(logging_formatter)
-LOGGER.addHandler(sysloghandler)
-
-# read parameters from ini file and build params dictionary
-globs = config['settings']
-settings = {}
-settings.update({'post_temperature_interval': globs.getint('post_temperature_interval', fallback=300)})
-
-# create master set of keys from parameter array
-# used later to prevent injection of any other keys
-SETTINGS_KEYS = set(settings)
-
-# if debugging then dump params in to syslog
-LOGGER.info("Parameters loaded: %s", json.dumps(settings, indent=2))
-
 # Main program logic follows:
 if __name__ == '__main__':
+
+    # Change CWD to location of this script
+    os.chdir(os.path.dirname(sys.argv[0]))
+
+    # read config file and settings
+    config = configparser.ConfigParser()
+    config.read('ledcontroller.ini')
+
+    # retrieve AWSIoT settings from config file
+    AWSIOT_PRIVATE_KEY_PATH = config['aws']['privatekeypath']
+    AWSIOT_CERTIFICATE_PATH = config['aws']['certificatepath']
+    AWSIOT_HOST = config['aws']['host']
+    AWSIOT_ROOT_CA_PATH = config['aws']['rootcapath']
+    AWSIOT_THINGNAME = config['aws']['thingname']
+
+    # debug flag
+    debugdict = config['debug']
+    DEBUG = debugdict.getboolean('debug', fallback=False)  # if debug true then additional logging to syslog is enabled
+    SYSLOG = debugdict.getboolean('syslog', fallback=True)  # if syslog is false then all output to syslog is suppressed
+
+    # setup logging at root level and set log level according to ini file
+    LOGGER = logging.getLogger("ledcontroller")
+    if DEBUG:
+        LOGGER.setLevel(logging.DEBUG)
+    elif SYSLOG:
+        LOGGER.setLevel(logging.INFO)
+    else:
+        LOGGER.setLevel(logging.WARNING)
+
+    # setup log handler to send messages to syslog
+    sysloghandler = logging.handlers.SysLogHandler(address='/dev/log')
+    sysloghandler.setLevel(DEBUG)  # set to most verbose level, handles all messages from LOGGER
+    logging_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
+    sysloghandler.setFormatter(logging_formatter)
+    LOGGER.addHandler(sysloghandler)
+
+    # read parameters from ini file and build params dictionary
+    globs = config['settings']
+    settings = {}
+    settings.update({'post_temperature_interval': globs.getint('post_temperature_interval', fallback=300)})
+
+    # create master set of keys from parameter array
+    # used later to prevent injection of any other keys
+    SETTINGS_KEYS = set(settings)
+
+    # if debugging then dump params in to syslog
+    LOGGER.info("Parameters loaded: %s", json.dumps(settings, indent=2))
 
     # connect to AWSIoT
     device = DeviceShadowHandler(
@@ -109,53 +111,69 @@ if __name__ == '__main__':
     strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
-    # launch thread to post temperature at required interval
+    # launch daemon thread to post temperature to AWSIoT at required interval
     temperaturepost_thread = threading.Thread(
         target=post_temperature,
         args=(settings.get('post_temperature_interval'),),
         daemon=True)
     temperaturepost_thread.start()
 
+    # load in light program
+
+    with open("program.yaml", 'r') as stream:
+        try:
+            programs = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    run_program = "autostart"
+    exit = False  # TODO replace with user exception handling
+    lights_thread: LightEffect = LightEffect(strip)
+
+    # main loop for programmed effects
     try:
+        while not exit:
 
-        for i in range(4):
-            lights_thread: LightSequence = LightSequence(strip, 1)
-            lights_thread.start()
-            device.status_post("RUNNING BLUELIGHTS")
-            time.sleep(60)
-            lights_thread.stop()
-            lights_thread.join()
+            # TODO need to deal with exceptions in threads
+            # ref: https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread-in-python
+            try:
+                # select program
+                program = programs.get(run_program)
 
-            lights_thread: LightSequence = LightSequence(strip, 3)
-            lights_thread.start()
-            device.status_post("RUNNING RAINBOW")
-            time.sleep(60)
-            lights_thread.stop()
-            lights_thread.join()
+                # iterate through the steps in the program
+                for step in program:
+                    if step.get("effect"):
+                        lights_thread: LightEffect = LightEffect(strip, step.get("effect"))
+                        start_time = time.time()
+                        device.status_post("STARTING EFFECT " + str(step.get("effect")))
+                        lights_thread.start()
+                        device.status_post("RUNNING EFFECT " + str(step.get("effect")))
+                        if step.get("duration"):
+                            time.sleep(step.get("duration"))
+                        else:
+                            while True:
+                                pass
+                        lights_thread.stop()
+                        lights_thread.join()
 
-        lights_thread: LightSequence = LightSequence(strip, 3)
-        lights_thread.start()
-        device.status_post("RUNNING RAINBOW")
+            except InterruptException:
+                device.status_post("STOPPING CURRENT PROGRAM")
+                try:
+                    lights_thread.stop()
+                    lights_thread.join()
+                except RuntimeError:
+                    pass
 
+                color_wipe(strip, Color(0, 0, 0), 10)
+                device.status_post("CURRENT PROGRAM STOPPED")
 
-        while True:
-            # print('Color wipe animations.')
-            # color_wipe(strip, Color(255, 0, 0))  # Red wipe
-            # color_wipe(strip, Color(0, 255, 0))  # Blue wipe
-            # color_wipe(strip, Color(0, 0, 255))  # Green wipe
-            # print('Theater chase animations.')
-            # theater_chase(strip, Color(127, 127, 127))  # White theater chase
-            # theater_chase(strip, Color(127, 0, 0))  # Red theater chase
-            # theater_chase(strip, Color(0, 0, 127))  # Blue theater chase
-            # print('Rainbow animations.')
-            # rainbow(strip)
-            # rainbow_cycle(strip)
-            # theater_chase_rainbow(strip)
-            time.sleep(0.1)
-
-    except KeyboardInterrupt:
+    # on interrupt cleanup thread and terminate
+    except (KeyboardInterrupt, ExitException):
         device.status_post("STOPPING")
-        lights_thread.stop()
-        lights_thread.join()
+        try:
+            lights_thread.stop()
+            lights_thread.join()
+        except RuntimeError:
+            pass
         color_wipe(strip, Color(0, 0, 0), 10)
         device.status_post("STOPPED")

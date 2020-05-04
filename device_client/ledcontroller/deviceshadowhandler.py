@@ -8,6 +8,7 @@
 
 import json
 import logging
+from exceptions import InterruptException, ExitException
 
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTShadowClient
 
@@ -125,6 +126,11 @@ class DeviceShadowHandler:
 
         # update shadow instance status
         self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 5)
+
+        # if sequence 99 triggered then raise an ExitException
+        if self.trigger == 99:
+            raise ExitException
+
 
     # Custom Shadow callback for GET operations
     def custom_shadow_callback_get(self, payload, response_status, token):

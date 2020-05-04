@@ -52,7 +52,7 @@ class LightSequence(threading.Thread):
         self._sequence = sequence                   # set to desired sequence
 
     def run(self):
-        """Run light effect selected by sequence number passed to constructor
+        """Run light effect selected by effect number passed to constructor
 
         :return:
         """
@@ -60,7 +60,7 @@ class LightSequence(threading.Thread):
         start_time = time.time()
 
         # UK emergency blue light effect
-        if self._sequence == 1:
+        if self._effect == 1:
             while not self._shutdown_event.is_set():
                 curr_time = time.time() * 2
                 for i in range(self._strip.numPixels()):
@@ -138,7 +138,7 @@ class LightSequence(threading.Thread):
         self._shutdown_event.set()
 
 
-def theater_chase(strip, color, wait_ms: int = 50, iterations: int = 10):
+def theater_chase(strip: PixelStrip, color: Color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
 
     :param strip:
@@ -172,7 +172,7 @@ def wheel(pos: int):
     return Color(0, pos * 3, 255 - pos * 3)
 
 
-def rainbow(strip, wait_ms: int = 20, iterations: int = 1):
+def rainbow(strip: PixelStrip, wait_ms: int = 20, iterations: int = 1):
     """Draw rainbow that fades across all pixels at once.
 
     :param strip:
@@ -187,7 +187,7 @@ def rainbow(strip, wait_ms: int = 20, iterations: int = 1):
         time.sleep(wait_ms / 1000.0)
 
 
-def rainbow_cycle(strip, wait_ms: int = 20, iterations: int = 5):
+def rainbow_cycle(strip: PixelStrip, wait_ms: int = 20, iterations: int = 5):
     """Draw rainbow that uniformly distributes itself across all pixels.
 
     :param strip:
@@ -203,7 +203,7 @@ def rainbow_cycle(strip, wait_ms: int = 20, iterations: int = 5):
         time.sleep(wait_ms / 1000.0)
 
 
-def theater_chase_rainbow(strip, wait_ms: int = 50):
+def theater_chase_rainbow(strip: PixelStrip, wait_ms: int = 50):
     """Rainbow movie theater light style chaser animation.
 
     :param strip:

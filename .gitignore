@@ -137,4 +137,7 @@ device_client/ledcontroller.ini
 
 # cfn parameter files
 param_*.json
+
+# application specific ignores
 /ledcontroller.ini
+/device_client/program.yaml
