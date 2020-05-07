@@ -4,31 +4,42 @@
 
 # effects.py
 #
+# by Darren Dunford
+#
 # originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
 
 import time
 import logging
 import threading
+from rpi_ws281x import PixelStrip
 
 LOGGER = logging.getLogger(__name__)
 
-def Color(red, green, blue, white=0):
+
+def color(red: int, green: int, blue: int, white: int=0):
     """Convert the provided red, green, blue color to a 24-bit color value.
     Each color component should be a value 0-255 where 0 is the lowest intensity
     and 255 is the highest intensity.
 
     Note the sequencing has been changed from RGB (most significant->least significant) to
     GRB - this seems to be a "feature" of the light strip I have!
+
+    :param red: red component 0-255
+    :param green: green component 0-255
+    :param blue: blue component 0-255
+    :param white: overall brightness, 0-255, defaults to 0
+    :return:
     """
     return (white << 24) | (green << 16) | (red << 8) | blue
 
-def color_wipe(strip, color, wait_ms: int = 50):
+
+def color_wipe(strip: PixelStrip, color: color, wait_ms: int = 50):
     """Wipe color across display a pixel at a time.
 
-    :param strip:
-    :param color:
-    :param wait_ms:
+    :param strip: PixelStrip object to apply the effect to
+    :param color: Color to wipe
+    :param wait_ms: blocking time to wait (in ms) before returning
     :return:
     """
     for i in range(strip.numPixels()):
@@ -37,19 +48,26 @@ def color_wipe(strip, color, wait_ms: int = 50):
         time.sleep(wait_ms / 1000.0)
 
 
-class LightSequence(threading.Thread):
+class LightEffect(threading.Thread):
+    """Thread object constructed to run a specific effect on a specific PixelStrip
 
-    def __init__(self, strip, sequence: int = 1):
+    """
+
+    def __init__(self, strip: PixelStrip, effect: int = 1, program = None):
         """Initialise thread with strip object for LED strip
 
-        :param strip:
-        :param sequence:
+        :param strip: PixelStrip to apply the effect to
+        :param effect: effect to initiate
         """
 
-        threading.Thread.__init__(self)             # call parent constructor
-        self._shutdown_event = threading.Event()    # set event flag to terminate thread
-        self._strip = strip                         # set to rpi_ws281x.PixelStrip object for LED strip to control
-        self._sequence = sequence                   # set to desired sequence
+        threading.Thread.__init__(self)  # call parent constructor
+        self._shutdown_event = threading.Event()  # set event flag to terminate thread
+        self._strip = strip  # set to rpi_ws281x.PixelStrip object for LED strip to control
+        if program:
+            self._program = program
+        else:
+            self._program = [{"effect":effect}]
+
 
     def run(self):
         """Run light effect selected by effect number passed to constructor
