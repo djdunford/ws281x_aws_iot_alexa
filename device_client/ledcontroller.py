@@ -21,7 +21,7 @@ import yaml
 from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, LightEffect, Color
+from ledcontroller.effects import color_wipe, LightEffect, color
 from exceptions import InterruptException, ExitException
 
 # LED strip configuration:
@@ -139,22 +139,9 @@ if __name__ == '__main__':
             try:
                 # select program
                 program = programs.get(run_program)
-
-                # iterate through the steps in the program
-                for step in program:
-                    if step.get("effect"):
-                        lights_thread: LightEffect = LightEffect(strip, step.get("effect"))
-                        start_time = time.time()
-                        device.status_post("STARTING EFFECT " + str(step.get("effect")))
-                        lights_thread.start()
-                        device.status_post("RUNNING EFFECT " + str(step.get("effect")))
-                        if step.get("duration"):
-                            time.sleep(step.get("duration"))
-                        else:
-                            while True:
-                                pass
-                        lights_thread.stop()
-                        lights_thread.join()
+                lights_thread: LightEffect = LightEffect(strip, program = program)
+                lights_thread.start()
+                lights_thread.join()
 
             except InterruptException:
                 device.status_post("STOPPING CURRENT PROGRAM")
@@ -164,7 +151,7 @@ if __name__ == '__main__':
                 except RuntimeError:
                     pass
 
-                color_wipe(strip, Color(0, 0, 0), 10)
+                color_wipe(strip, color(0, 0, 0), 10)
                 device.status_post("CURRENT PROGRAM STOPPED")
 
     # on interrupt cleanup thread and terminate
@@ -175,5 +162,5 @@ if __name__ == '__main__':
             lights_thread.join()
         except RuntimeError:
             pass
-        color_wipe(strip, Color(0, 0, 0), 10)
+        color_wipe(strip, color(0, 0, 0), 10)
         device.status_post("STOPPED")
