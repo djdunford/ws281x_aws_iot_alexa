@@ -78,6 +78,7 @@ class LightEffect(threading.Thread):
         for step in self._program:
             start_time: float = time.time()
 
+            # TODO: change effects to use names rather than numbers
             # UK emergency blue light effect
             if step.get("effect") == 1:
                 while (not self._shutdown_event.is_set()) and (time.time() < start_time + step.get("duration",86400)):
@@ -148,6 +149,23 @@ class LightEffect(threading.Thread):
                             self._strip.setPixelColor(i, color(0, 0, 0))
                     self._strip.show()
                     time.sleep(0.95)
+
+            # red, white and blue (for VE day) - requires ledstip of length 50
+            elif step.get("effect") == 5:
+
+                for i in range(8):
+                    self._strip.setPixelColor(i*6+1,color(255,0,0))
+                    self._strip.setPixelColor(i*6+2,color(255,0,0))
+                    self._strip.setPixelColor(i*6+3,color(255,255,255))
+                    self._strip.setPixelColor(i*6+4,color(255,255,255))
+                    self._strip.setPixelColor(i*6+5,color(0,0,255))
+                    self._strip.setPixelColor(i*6+6,color(0,0,255))
+
+                self._strip.show()
+
+        # after program complete, loop until terminate flag received
+        while not self._shutdown_event.is_set():
+            pass
 
 
     def stop(self):
