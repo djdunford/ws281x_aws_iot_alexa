@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 """Initiates connection to AWSIoT and provides helper functions
-"""
 
-# deviceshadowhandler.py
-#
-# by Darren Dunford
+deviceshadowhandler.py
+
+by Darren Dunford
+"""
 
 import json
 import logging
-from exceptions import InterruptException, ExitException
-
+import queue
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTShadowClient
 
 LOGGER = logging.getLogger(__name__)
 
-#
-#
-# Define functions which implement AWSIoT integration
 
 class DeviceShadowHandler:
 
-    # post status update message to device shadow and, if enabled, syslog
     def status_post(self, status, state=None):
-        """Post status message and device state to AWSIoT and LOGGER"""
+        """Post status message and device state to AWSIoT and LOGGER
+
+        :param status: status string
+        :param state: optional dictionary to add to shadow reported state
+        :return:
+        """
 
         # create new JSON payload to update device shadow
-        new_payload = {"state": {"reported": {"command": str(status), "sequencerun": None, "sequence": None},
-                                 "desired": None}}
+        new_payload = {"state": {"reported": {"status": str(status)}, "desired": None}}
         if state:
             new_payload.update({"state": {"reported": state}})
 
@@ -35,9 +34,10 @@ class DeviceShadowHandler:
 
         # log to syslog
         LOGGER.info(status)
+        LOGGER.debug(json.dumps(new_payload))
 
     # constructor
-    def __init__(self, thingname, host, root_ca_path, private_key_path, certificate_path):
+    def __init__(self, thingname: str, host: str, root_ca_path: str, private_key_path: str, certificate_path: str):
         """Initiate AWS IoT connection
 
         :param thingname: AWSIoT thing name
@@ -65,28 +65,28 @@ class DeviceShadowHandler:
         # Connect to AWS IoT with a 300 second keepalive
         self.shadow_client.connect(300)
 
-        # Create a deviceShadow with persistent subscription
+        # Create a deviceShadow with persistent subscription and register delta handler
         self.shadow_handler = self.shadow_client.createShadowHandlerWithName(thingname, True)
+        self.shadow_handler.shadowRegisterDeltaCallback(self.custom_shadow_callback_delta)
 
         # initial status post
         self.status_post('STARTING')
 
         # dictionary to hold callback responses
-        # TODO: add logic to clear out stale entries, otherwise will become a memory leak
         self._callbackresponses = {}
 
-        # callbacks in this class update this public instance variable with trigger commands received
-        self.trigger = 0
+        # callbacks in this class post events on to this queue
+        self.event_queue = queue.SimpleQueue()
 
-        self.settings = None
+        self.settings = {}
 
     # Custom shadow callback for delta -> remote triggering
-    def custom_shadow_callback_delta(self, payload, response_status, token):
+    def custom_shadow_callback_delta(self, payload: str, response_status, token):
         """
 
         :param payload: JSON string ready to be parsed using json.loads(...)
-        :param response_status:
-        :param token:
+        :param response_status: ignored
+        :param token: ignored
         """
 
         # DEBUG dump payload in to syslog
@@ -94,47 +94,25 @@ class DeviceShadowHandler:
 
         # create JSON dictionary from payload
         payload_dict = json.loads(payload)
-        new_payload = {"state": {"reported": {"status": "RUNNING"}, "desired": None}}
+        new_payload = {}
 
-        # check for parameter update
-        new_settings = payload_dict.get('state').get('settings')
+        # check for command, if received push event on to queue
+        if payload_dict.get('state').get('command'):
+            self.event_queue.put_nowait({"command":payload_dict.get('state').get('command')})
+            new_payload.update({"state": {"desired": {"command": None}}})
 
-        # remove unwanted keys (avoids external injection of unwanted keys)
-        # TODO handle unwanted_keys correctly, move settings to a separate module
-        # unwanted_keys = set(new_settings) - SETTINGS_KEYS
-        unwanted_keys = None
-        for unwanted_key in unwanted_keys:
-            del payload_dict["state"]["settings"][unwanted_key]
-
-        # update parameters
-        self.settings.update(payload_dict.get('state').get('settings'))
-
-        # report status back to AWSIoT
-        new_payload.update({"state": {"reported": {"settings": self.settings}}})
-
-        # output syslog message
-        LOGGER.info("Settings updated: " + json.dumps(self.settings))
-
-        # check for triggering
-        new_state = payload_dict.get('state').get('command')
-        if new_state == "TRIGGER":
-            self.trigger = int(payload_dict.get('state').get('sequence', 0))
-            new_payload.update({"state": {
-                "reported": {"command": "TRIGGERED", "sequencerun": self.trigger, "sequence": None}}})
+        # check for settings, if received push event on to queue
+        if payload_dict.get('state').get('settings'):
+            self.event_queue.put_nowait({"settings":payload_dict.get('state').get('settings')})
+            new_payload.update({"state": {"desired": {"settings": payload_dict.get('state').get('settings')}}})
 
         LOGGER.info("Shadow update: " + json.dumps(new_payload))
 
         # update shadow instance status
         self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 5)
 
-        # if sequence 99 triggered then raise an ExitException
-        if self.trigger == 99:
-            raise ExitException
-
-
-    # Custom Shadow callback for GET operations
     def custom_shadow_callback_get(self, payload, response_status, token):
-        """
+        """Callback function records response from get shadow operation
 
         :param payload:
         :param response_status:
@@ -144,7 +122,14 @@ class DeviceShadowHandler:
         self._callbackresponses.update({token: {"payload": json.loads(payload), "responseStatus": response_status}})
 
     def get_response(self, token):
-        return self._callbackresponses[token]
+        """Return prior get shadow operation response
+
+        note each response is deleted when returned, i.e. can only be returned once
+
+        :param token:
+        :return:
+        """
+        return self._callbackresponses.pop(token)
 
     # post all parameters as a shadow update
     def post_param(self):
@@ -155,7 +140,7 @@ class DeviceShadowHandler:
     def post_state(self, state):
 
         # create new JSON payload to update device shadow
-        new_payload = {"state": {"reported": {"command": state}, "desired": None}}
+        new_payload = {"state": {"reported": {"status": state}, "desired": None}}
         self.shadow_handler.shadowUpdate(json.dumps(new_payload), None, 20)
 
         # log to syslog

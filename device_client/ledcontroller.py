@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 import yaml
+import queue
 from gpiozero import CPUTemperature
 from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
@@ -119,7 +120,6 @@ if __name__ == '__main__':
     temperaturepost_thread.start()
 
     # load in light program
-
     with open("program.yaml", 'r') as stream:
         try:
             programs = yaml.safe_load(stream)
@@ -127,22 +127,32 @@ if __name__ == '__main__':
             print(exc)
 
     run_program = "autostart"
-    exit = False  # TODO replace with user exception handling
     lights_thread: LightEffect = LightEffect(strip)
 
-    # main loop for programmed effects
+    # main loop for running lights programs and reacting to events
     try:
-        while not exit:
+        while True:
 
-            # TODO need to deal with exceptions in threads
-            # ref: https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread-in-python
+            # main loop for running a specific light program and reacting to events
             try:
+
                 # select program
                 program = programs.get(run_program)
+                device.status_post(f"RUNNING PROGRAM {run_program}")
                 lights_thread: LightEffect = LightEffect(strip, program = program)
                 lights_thread.start()
-                lights_thread.join()
 
+                # react to event queue
+                while True:
+                    try:
+                        event = device.event_queue.get_nowait()
+                        if event == {"command": "STOP"}:
+                            raise ExitException
+                    except queue.Empty:
+                        pass
+                    time.sleep(0.1)
+
+            # if program interrupted then clear lights ready for next program
             except InterruptException:
                 device.status_post("STOPPING CURRENT PROGRAM")
                 try:
@@ -150,11 +160,10 @@ if __name__ == '__main__':
                     lights_thread.join()
                 except RuntimeError:
                     pass
-
                 color_wipe(strip, color(0, 0, 0), 10)
                 device.status_post("CURRENT PROGRAM STOPPED")
 
-    # on interrupt cleanup thread and terminate
+    # to exit cleanup thread and terminate
     except (KeyboardInterrupt, ExitException):
         device.status_post("STOPPING")
         try:
