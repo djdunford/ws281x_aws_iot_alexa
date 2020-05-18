@@ -20,9 +20,8 @@ import time
 import yaml
 import queue
 from gpiozero import CPUTemperature
-from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, LightEffect, color
+from ledcontroller.effects import LockingPixelStrip, color_wipe, LightEffect, color
 from exceptions import InterruptException, ExitException
 
 # LED strip configuration:
@@ -109,7 +108,7 @@ if __name__ == '__main__':
         private_key_path=AWSIOT_PRIVATE_KEY_PATH)
 
     # Create NeoPixel object with appropriate configuration and initialise library
-    strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
+    strip = LockingPixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
     # launch daemon thread to post temperature to AWSIoT at required interval
