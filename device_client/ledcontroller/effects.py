@@ -95,7 +95,6 @@ class LightEffect(threading.Thread):
             for step in self._program:
                 start_time: float = time.time()
 
-                # TODO: change effects to use names rather than numbers
                 # UK emergency blue light effect
                 if step.get("effect") == 1 or step.get("effect") == "EmergencyBlueLight":
                     while (not self._shutdown_event.is_set()) and (
