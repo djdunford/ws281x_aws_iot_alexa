@@ -48,6 +48,32 @@ def post_temperature(interval: int=300):
         device.post_temperature(cpu.temperature)
         time.sleep(interval)
 
+def post_lightstatus(interval: int=10):
+    """
+    thread safe daemon function posts current status of lights every interval seconds
+
+    :param interval:
+    :return:
+    """
+    while True:
+
+        # create list of RGB values
+        lights = []
+        for i in range(strip.numPixels()):
+            lights.append(strip.getPixelColor(i))
+
+        # post status JSON
+        device.post_state({
+            "lights":lights,
+            "brightness":strip.getBrightness(),
+            "program":strip.program,
+            "effect":strip.effect,
+            "step":strip.step,
+            "step_num":strip.step_num,
+            "run_program":run_program,
+        })
+        time.sleep(interval)
+
 
 # Main program logic follows:
 if __name__ == '__main__':
@@ -88,9 +114,12 @@ if __name__ == '__main__':
     LOGGER.addHandler(sysloghandler)
 
     # read parameters from ini file and build params dictionary
+    # note: explicitly defining parameters here also defines default values and ensures rogue parameters
+    # are not injected from an external source
     globs = config['settings']
     settings = {}
     settings.update({'post_temperature_interval': globs.getint('post_temperature_interval', fallback=300)})
+    settings.update({'post_lightstatus_interval': globs.getint('post_lightstatus_interval', fallback=10)})
 
     # create master set of keys from parameter array
     # used later to prevent injection of any other keys
@@ -115,8 +144,21 @@ if __name__ == '__main__':
     temperaturepost_thread = threading.Thread(
         target=post_temperature,
         args=(settings.get('post_temperature_interval'),),
-        daemon=True)
+        daemon=True,
+    )
     temperaturepost_thread.start()
+
+    # set default program to run and set no effect
+    run_program: str = "autostart"
+    effect: int = 0
+
+    # launch daemon thread to post pixel strip status to AWSIoT at required interval
+    lightstatuspost_thread = threading.Thread(
+        target=post_lightstatus,
+        args=(settings.get('post_lightstatus_interval'),),
+        daemon=True,
+    )
+    lightstatuspost_thread.start()
 
     # load in light program
     with open("program.yaml", 'r') as stream:

@@ -23,15 +23,29 @@ class LockingPixelStrip(PixelStrip):
     """
 
     lock: threading.Lock
+    step_num: int
 
-    def __init__(self, num, pin, freq, dma, invert, brightness, channel):
-        """constructor called to construct the thread lock object
+    def __init__(self, num: int, pin: int, freq: int, dma: int, invert: bool, brightness: int, channel: int):
+        """constructor called to construct the thread locking PixelStrip object
 
-        :param num:
-        :param pin:
+        :param num: number of LEDs on string
+        :param pin: BCM pin number for LED data line (18 uses PWM!)
+        :param freq: LED signal frequency in Hz (usually 800kHz)
+        :param dma: DMA channel to use for generating signal (try 10)
+        :param invert: True to invert the signal (when using NPN transistor level shift)
+        :param brightness: global brightness setting (0 darkest 255 brightest)
+        :param channel: set to 1 for GPIOs 13, 19, 41, 45 or 53
         """
+
+        # call parent constructor
         super().__init__(num, pin, freq, dma, invert, brightness, channel)
+
+        # construct instance variables
         self.lock = threading.Lock()
+        self.program = None
+        self.effect = None
+        self.step = None
+        self.step_num = 0
 
 
 def color(red: int, green: int, blue: int, white: int = 0):
@@ -92,7 +106,17 @@ class LightEffect(threading.Thread):
         """
 
         with self._strip.lock:
+
+            # record program and initialise step_num instance variables, can be accessed outside the class
+            self._strip.program = self._program
+            self._strip.step_num = 0
+
+            # iterate over the steps in the program
             for step in self._program:
+
+                # record step and effect, can be accessed outside the class
+                self._strip.step = step
+                self._strip.effect = step.get("effect")
                 start_time: float = time.time()
 
                 # UK emergency blue light effect
@@ -204,6 +228,7 @@ class LightEffect(threading.Thread):
         self._shutdown_event.set()
 
 
+# TODO reimplement theater_chase within run as an effect
 def theater_chase(strip: PixelStrip, color: color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
 
@@ -226,7 +251,7 @@ def theater_chase(strip: PixelStrip, color: color, wait_ms: int = 50, iterations
 def wheel(pos: int):
     """Generate rainbow colors across 0-255 positions.
 
-    :param pos:
+    :param pos: position to return color for (0-255)
     :return:
     """
     if pos < 85:
@@ -238,6 +263,7 @@ def wheel(pos: int):
     return color(0, pos * 3, 255 - pos * 3)
 
 
+# TODO reimplement rainbow within run as an effect
 def rainbow(strip: PixelStrip, wait_ms: int = 20, iterations: int = 1):
     """Draw rainbow that fades across all pixels at once.
 
@@ -253,6 +279,7 @@ def rainbow(strip: PixelStrip, wait_ms: int = 20, iterations: int = 1):
         time.sleep(wait_ms / 1000.0)
 
 
+# TODO reimplement rainbow_cycle within run as an effect
 def rainbow_cycle(strip: PixelStrip, wait_ms: int = 20, iterations: int = 5):
     """Draw rainbow that uniformly distributes itself across all pixels.
 
@@ -269,6 +296,7 @@ def rainbow_cycle(strip: PixelStrip, wait_ms: int = 20, iterations: int = 5):
         time.sleep(wait_ms / 1000.0)
 
 
+# TODO reimplement theater_chase_rainbow within run as an effect
 def theater_chase_rainbow(strip: PixelStrip, wait_ms: int = 50):
     """Rainbow movie theater light style chaser animation.
 
