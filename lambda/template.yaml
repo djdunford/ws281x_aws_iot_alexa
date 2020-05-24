@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM template for ws281x REST API
+
+Globals:
+  Function:
+    Timeout: 3
+    Runtime: python3.7
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+
+  ShowSequenceApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: api.showsequence
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+      Events:
+        TriggerPostEvent:
+          Type: Api
+          Properties:
+            Path: "/trigger/{sequence}"
+            Method: post
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: AWS_IAM
+              InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
+
+  ApiDomainMapping:
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Properties:
+      DomainName: "{{resolve:ssm:URL_API:1}}"
+      RestApiId: !Ref Api
+      Stage: prod
+      BasePath: ledstrip
+    DependsOn: ApiprodStage  # see https://github.com/awslabs/serverless-application-model/issues/192
+
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: LedstripApiProd
+      StageName: prod
+      EndpointConfiguration: REGIONAL
+      MethodSettings: [{
+                         "ThrottlingBurstLimit": 10,
+                         "ThrottlingRateLimit": 5,
+                         "ResourcePath": "/*",
+                         "HttpMethod": "*",
+                       }]
+      Cors:
+        AllowMethods: "'OPTIONS,POST,GET'"
+        AllowHeaders: "'X-Amz-Security-Token,Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'" # TODO reference environment variable for this
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'LambdaExec-${AWS::StackName}'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [lambda.amazonaws.com]
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        -  arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: "iotshadowoperations"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "iot:GetThingShadow"
+                  - "iot:UpdateThingShadow"
+                Resource: "arn:aws:iot:*:*:thing/*"

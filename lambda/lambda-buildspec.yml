@@ -1,0 +1,32 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.7
+      nodejs: 8
+    commands:
+
+      # Upgrade lambda python dependencies, and upgrade  awscli and boto3
+      - echo 'Installing requirements for lambda functions'
+      - pip install --upgrade awscli
+      - pip install --upgrade boto3
+      - pip install aws-sam-cli
+
+  pre_build:
+    commands:
+
+  build:
+    commands:
+
+      # Use AWS SAM to package the application by using AWS CloudFormation
+      - echo 'Packaging SAM artifacts'
+      - cd lambda
+      - pip install -r requirements.txt -t .
+      - sam package --template-file api.yml --s3-bucket $S3_BUCKET --output-template-file api-export.yml
+      - cd ..
+
+artifacts:
+  type: zip
+  files:
+    - 'lambda/api-export.yml'
