@@ -125,7 +125,6 @@ if __name__ == '__main__':
         except yaml.YAMLError as exc:
             print(exc)
 
-    run_program = "autostart"
     lights_thread: LightEffect = LightEffect(strip)
 
     # main loop for running lights programs and reacting to events
@@ -135,18 +134,45 @@ if __name__ == '__main__':
             # main loop for running a specific light program and reacting to events
             try:
 
-                # select program
-                program = programs.get(run_program)
-                device.status_post(f"RUNNING PROGRAM {run_program}")
-                lights_thread: LightEffect = LightEffect(strip, program = program)
+                # select program or effect
+                if run_program != "":
+                    program = programs.get(run_program)
+                    device.status_post(f"RUNNING PROGRAM {run_program}")
+                    lights_thread: LightEffect = LightEffect(strip, program = program)
+                else:
+                    device.status_post(f"RUNNING EFFECT {effect}")
+                    lights_thread: LightEffect = LightEffect(strip, effect = effect)
                 lights_thread.start()
 
                 # react to event queue
                 while True:
                     try:
                         event = device.event_queue.get_nowait()
-                        if event == {"command": "STOP"}:
+
+                        # parse and handle any commands received
+                        command = event.get("command")
+                        if command == "STOP" or command.get("action") == "STOP":
                             raise ExitException
+
+                        elif command.get("action") == "RUN":
+                            run_program = command.get("program")
+                            raise InterruptException
+
+                        elif command.get("action") == "EFFECT":
+                            run_program = ""
+                            effect = command.get("effect")
+                            raise InterruptException
+
+                        elif command.get("action") == "OFF":
+                            run_program = ""
+                            effect = 0
+                            raise InterruptException
+
+                        # parse and handle settings changes received
+                        settings = event.get("settings")
+                        if settings:
+                            pass  # TODO handle settings changes
+
                     except queue.Empty:
                         pass
                     time.sleep(0.1)

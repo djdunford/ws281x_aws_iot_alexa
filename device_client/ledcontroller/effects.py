@@ -179,8 +179,17 @@ class LightEffect(threading.Thread):
                         self._strip.setPixelColor(i * 6 + 4, color(255, 255, 255))
                         self._strip.setPixelColor(i * 6 + 5, color(0, 0, 255))
                         self._strip.setPixelColor(i * 6 + 6, color(0, 0, 255))
-
                     self._strip.show()
+
+                # blackout
+                elif step.get("effect") == 0 or step.get("effect") == "OFF":
+
+                    for i in range(self._strip.numPixels()):
+                        self._strip.setPixelColor(i, color(0,0,0))
+                    self._strip.show()
+
+                # increment step number
+                self._strip.step_num += 1
 
             # after program complete, loop until terminate flag received
             while not self._shutdown_event.is_set():
