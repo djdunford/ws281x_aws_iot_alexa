@@ -13,8 +13,8 @@ phases:
       - pip install --upgrade boto3
       - pip install aws-sam-cli
 
-  pre_build:
-    commands:
+#  pre_build:
+#    commands:
 
   build:
     commands:
