@@ -12,11 +12,11 @@ phases:
   build:
     commands:
       - echo 'API - Packaging SAM artifacts'
-      - cd lambda
-      - pip install -r api/requirements.txt -t .
+      - cd lambda/api
+      - pip install -r requirements.txt -t .
       - sam package --template-file api.yaml --s3-bucket $S3_BUCKET --output-template-file api-export.yml
       - cd ..
 artifacts:
   type: zip
   files:
-    - 'lambda/api-export.yml'
+    - 'lambda/api/api-export.yml'
