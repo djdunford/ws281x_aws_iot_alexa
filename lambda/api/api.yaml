@@ -8,36 +8,18 @@ Globals:
     Runtime: python3.7
 
 Resources:
-  HelloWorldFunction:
+  OffFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
+      CodeUri: api/
+      Handler: api.off
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /hello
-            Method: get
-
-  ShowSequenceApiFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: api.showsequence
-      Role:
-        Fn::GetAtt:
-          - LambdaExecutionRole
-          - Arn
-      Events:
-        TriggerPostEvent:
-          Type: Api
-          Properties:
-            Path: "/trigger/{sequence}"
+            Path: /off
             Method: post
             RestApiId: !Ref Api
-            Auth:
-              Authorizer: AWS_IAM
-              InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
 
   ApiDomainMapping:
     Type: 'AWS::ApiGateway::BasePathMapping'
