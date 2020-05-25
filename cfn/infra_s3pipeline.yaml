@@ -1,6 +1,6 @@
-AWSTemplateFormatVersion: 2010-09-09
+AWSTemplateFormatVersion: '2010-09-09'
 
-Description: CodePipeline for LedStrip infra_s3staticwebsite.yaml
+Description: Build CodePipeline, CodeBuild and IAM resources to deploy ws281x API and Alexa resources
 
 Parameters:
   BranchName:
@@ -263,6 +263,11 @@ Resources:
         Image: aws/codebuild/standard:2.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: False
+        EnvironmentVariables:
+          -
+            Name: S3_BUCKET
+            Type: PLAINTEXT
+            Value: !Ref ArtifactStoreS3Location
       LogsConfig:
         CloudWatchLogs:
           Status: ENABLED
