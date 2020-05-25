@@ -11,7 +11,7 @@ phases:
       - pip install aws-sam-cli
   build:
     commands:
-      - echo 'API: Packaging SAM artifacts'
+      - echo 'API - Packaging SAM artifacts'
       - cd lambda/api
       - pip install -r requirements.txt -t .
       - sam package --template-file api.yaml --s3-bucket $S3_BUCKET --output-template-file api-export.yml
