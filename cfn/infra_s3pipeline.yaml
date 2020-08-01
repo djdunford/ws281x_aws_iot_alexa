@@ -374,6 +374,32 @@ Resources:
                   Fn::Sub: Cognito-${AWS::StackName}
                 TemplatePath: SourceOutput::cfn/infra_cognito.yaml
               RunOrder: 1
+        -
+          Name: Deploy
+          Actions:
+            -
+              Name: DeployAPI
+              InputArtifacts:
+                -
+                  Name: BuildOutput
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: "1"
+                Provider: CloudFormation
+              OutputArtifacts:
+                -
+                  Name:
+                    Fn::Sub: DeployAPI-${AWS::StackName}
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn:
+                  Fn::GetAtt: [ CloudFormationRole, Arn ]
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName:
+                  Fn::Sub: DeployAPI-${AWS::StackName}
+                TemplatePath: BuildOutput::lambda/api/api-export.yml
+              RunOrder: 1
       ArtifactStore:
         Type: S3
         Location:
