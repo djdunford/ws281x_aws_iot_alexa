@@ -395,10 +395,10 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn:
                   Fn::GetAtt: [ CloudFormationRole, Arn ]
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 StackName:
                   Fn::Sub: DeployAPI-${AWS::StackName}
-                TemplatePath: BuildOutput::lambda/api/api-export.yml
+                TemplatePath: BuildOutput::lambda/api/api-export.yaml
               RunOrder: 1
       ArtifactStore:
         Type: S3

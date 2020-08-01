@@ -14,9 +14,9 @@ phases:
       - echo 'API - Packaging SAM artifacts'
       - cd lambda/api
       - pip install -r requirements.txt -t .
-      - sam package --template-file api.yaml --s3-bucket $S3_BUCKET --output-template-file api-export.yml
+      - sam package --template-file api.yaml --s3-bucket $S3_BUCKET --output-template-file api-export.yaml
       - cd ..
 artifacts:
   type: zip
   files:
-    - 'lambda/api/api-export.yml'
+    - 'lambda/api/api-export.yaml'
