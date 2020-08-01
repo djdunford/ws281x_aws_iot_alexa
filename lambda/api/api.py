@@ -22,15 +22,22 @@ IOTCLIENT = boto3.client('iot-data', region_name='eu-west-1')  # TODO remove har
 
 
 def off(event, context):
-    LOGGER.debug("api.off invoked")
-    LOGGER.debug("Received event: " + json.dumps(event, indent=2))
     LOGGER.info("Executing command: OFF")
+
+    # obtain thingname from query parameter
+    try:
+        thingname = event['queryStringParameters']['thingname']
+    except:
+        LOGGER.error("Error getting query string parameter")
+        raise Exception("Error getting query string parameter")
+
+    # publish event to AWSIoT MQTT
     payload = {"state": {"desired": {"command": {"action": "OFF"}}}}
-    # TODO remove hardcoded reference to thingName in next line
-    response = IOTCLIENT.update_thing_shadow(thingName="DunfordXmasCastle", payload=json.dumps(payload))
+    response = IOTCLIENT.update_thing_shadow(thingName=thingname, payload=json.dumps(payload))
+
+    # TODO interpret response from update_thing_shadow
     streaming_body = response["payload"]
     json_state = json.loads(streaming_body.read())
-    LOGGER.info(json_state)
     headers = {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}
     response = {'statusCode': 200, 'body': json.dumps(json_state), 'headers': headers}
     LOGGER.debug("Sending response: " + json.dumps(response, indent=2))
