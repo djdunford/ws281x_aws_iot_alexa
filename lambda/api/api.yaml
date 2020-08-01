@@ -29,9 +29,9 @@ Resources:
     Properties:
       DomainName: "{{resolve:ssm:URL_API:1}}"
       RestApiId: !Ref Api
-      Stage: prod
+      Stage: !Ref Api.Stage  # see https://github.com/awslabs/serverless-application-model/issues/192
       BasePath: ledstrip
-    DependsOn: ApiprodStage  # see https://github.com/awslabs/serverless-application-model/issues/192
+    # DependsOn: ApiprodStage  # see https://github.com/awslabs/serverless-application-model/issues/192
 
   Api:
     Type: AWS::Serverless::Api
