@@ -19,7 +19,9 @@ Resources:
             Path: /off
             Method: get
             RequestParameters:
-              - method.request.querystring.thingname
+              - method.request.querystring.thingname:
+                  Required: true
+                  Caching: false
             RestApiId: !Ref Api
 
   ApiDomainMapping:
