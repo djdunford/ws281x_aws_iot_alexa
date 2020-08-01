@@ -18,7 +18,7 @@ Resources:
           Properties:
             Path: /off
             Method: get
-            RequestParameters:
+            RequestParameters: # note see https://github.com/awslabs/serverless-application-model/issues/1403
               - method.request.querystring.thingname:
                   Required: true
                   Caching: false
