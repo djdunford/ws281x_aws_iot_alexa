@@ -23,6 +23,10 @@ Resources:
                   Required: true
                   Caching: false
             RestApiId: !Ref Api
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
 
   ApiDomainMapping:
     Type: 'AWS::ApiGateway::BasePathMapping'
