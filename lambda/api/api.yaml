@@ -5,48 +5,37 @@ Description: AWS SAM template for ws281x REST API
 Globals:
   Function:
     Timeout: 3
-    Runtime: python3.7
+    Runtime: python3.8
 
 Resources:
-  HelloWorldFunction:
+  OffFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
+      Handler: api.off
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /hello
+            Path: /off
             Method: get
-
-  ShowSequenceApiFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: api.showsequence
+            RequestParameters: # note see https://github.com/awslabs/serverless-application-model/issues/1403
+              - method.request.querystring.thingname:
+                  Required: true
+                  Caching: false
+            RestApiId: !Ref Api
       Role:
         Fn::GetAtt:
           - LambdaExecutionRole
           - Arn
-      Events:
-        TriggerPostEvent:
-          Type: Api
-          Properties:
-            Path: "/trigger/{sequence}"
-            Method: post
-            RestApiId: !Ref Api
-            Auth:
-              Authorizer: AWS_IAM
-              InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
 
   ApiDomainMapping:
     Type: 'AWS::ApiGateway::BasePathMapping'
     Properties:
       DomainName: "{{resolve:ssm:URL_API:1}}"
       RestApiId: !Ref Api
-      Stage: prod
+      Stage: !Ref Api.Stage  # see https://github.com/awslabs/serverless-application-model/issues/192
       BasePath: ledstrip
-    DependsOn: ApiprodStage  # see https://github.com/awslabs/serverless-application-model/issues/192
+    # DependsOn: ApiprodStage  # see https://github.com/awslabs/serverless-application-model/issues/192
 
   Api:
     Type: AWS::Serverless::Api
