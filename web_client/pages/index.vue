@@ -5,6 +5,14 @@
         <!--        <logo />-->
         <!--        <vuetify-logo />-->
       </div>
+      <div class="container">
+        <div v-if="!signedIn">
+          <amplify-authenticator />
+        </div>
+        <div v-else>
+          <amplify-sign-out />
+        </div>
+      </div>
       <v-card>
         <v-card-title class="headline">
           Welcome to the Vuetify + Nuxt.js template
@@ -73,7 +81,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn color="primary" nuxt to="/inspire"> Continue</v-btn>
+          <!--          <v-btn color="primary" nuxt to="/inspire"> Continue</v-btn>-->
         </v-card-actions>
       </v-card>
     </v-flex>
@@ -81,13 +89,36 @@
 </template>
 
 <script>
-// import Logo from '~/components/Logo.vue'
-// import VuetifyLogo from '~/components/VuetifyLogo.vue'
-//
-// export default {
-//   components: {
-//     Logo,
-//     VuetifyLogo,
-//   },
-// }
+import { Auth } from 'aws-amplify'
+import { AmplifyEventBus } from 'aws-amplify-vue'
+
+export default {
+  data() {
+    return {
+      signedIn: false,
+    }
+  },
+  created() {
+    this.findUser()
+
+    AmplifyEventBus.$on('authState', (info) => {
+      if (info === 'signedIn') {
+        this.findUser()
+      } else {
+        this.signedIn = false
+      }
+    })
+  },
+  methods: {
+    async findUser() {
+      try {
+        const user = await Auth.currentAuthenticatedUser()
+        this.signedIn = true
+        console.log(user) // eslint-disable-line no-console
+      } catch (err) {
+        this.signedIn = false
+      }
+    },
+  },
+}
 </script>
