@@ -9,6 +9,7 @@ Resources:
       UserPoolId: !ImportValue CognitoUserPoolId
       ExplicitAuthFlows:
         - USER_PASSWORD_AUTH
+# TODO: Add additional attributes for UserPoolClient
 
 #  UserPoolClientAlexa:
 #    Type: AWS::Cognito::UserPoolClient
@@ -88,5 +89,5 @@ Resources:
                 Resource: "*"
               - Effect: "Allow"
                 Action:
-                  - "execute-api:*"
+                  - "execute-api:*"  # TODO restrict API access to APIs created within this project
                 Resource: "*"
