@@ -23,6 +23,9 @@ Resources:
                   Required: true
                   Caching: false
             RestApiId: !Ref Api
+            Auth:
+              Authorizer: AWS_IAM
+              InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
       Role:
         Fn::GetAtt:
           - LambdaExecutionRole
