@@ -29,7 +29,7 @@ def off(event, context):
         thingname = event['queryStringParameters']['thingname']
     except:
         LOGGER.error("Error getting query string parameter")
-        raise Exception("Error getting query string parameter")
+        raise Exception("Error getting query string parameter") # TODO: check CORS headers on error responses
 
     # publish event to AWSIoT MQTT
     payload = {"state": {"desired": {"command": {"action": "OFF"}}}}

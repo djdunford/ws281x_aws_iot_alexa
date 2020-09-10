@@ -81,7 +81,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <!--          <v-btn color="primary" nuxt to="/inspire"> Continue</v-btn>-->
+          <v-btn v-if="signedIn" nuxt color="primary" @click="click_off"
+            >OFF</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-flex>
@@ -89,7 +91,7 @@
 </template>
 
 <script>
-import { Auth } from 'aws-amplify'
+import { Auth, API } from 'aws-amplify'
 import { AmplifyEventBus } from 'aws-amplify-vue'
 
 export default {
@@ -118,6 +120,19 @@ export default {
       } catch (err) {
         this.signedIn = false
       }
+    },
+    click_off() {
+      console.log('off clicked') // eslint-disable-line no-console
+      const payload = {
+        body: {},
+        headers: {},
+        queryStringParameters: {
+          thingname: 'ThomasLights2',
+        },
+      }
+      API.post('ws281xapi', '/off', payload).catch((error) => {
+        console.log(error.response) // eslint-disable-line no-console
+      })
     },
   },
 }
