@@ -8,6 +8,7 @@
 #
 # originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
+import random
 
 import logging
 import threading
@@ -193,7 +194,71 @@ class LightEffect(threading.Thread):
                         self._strip.show()
                         time.sleep(0.95)
 
-                # red, white and blue (for VE day) - requires ledstip of length 50
+                elif step.get("effect") == "Halloween":
+                    positions = []
+                    tick = time.time()
+                    while (not self._shutdown_event.is_set()):
+
+                        # set all to orange
+                        for i in range(self._strip.numPixels()):
+                            self._strip.setPixelColor(i, color(0xFF, 0x44, 0x00))
+
+                        # add a position (roll the dice!)
+                        if time.time() > tick + 0.1:
+                            if random.randrange(1, 10) == 1:
+                                positions.append({"starttime": time.time(), "position": random.randrange(5, 45)})
+
+                        # render the positions
+                        for position in positions:
+                            fraction = abs(time.time() - position["starttime"] - 1)
+                            self._strip.setPixelColor(position["position"] - 3, color(0xFF, int(0x44 * (fraction * 0.5 + 0.5)), 0))
+                            self._strip.setPixelColor(position["position"] - 2, color(0xFF, int(0x44 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] - 1, color(0xFF, int(0x44 * fraction), 0))
+                            self._strip.setPixelColor(position["position"], color(0xFF, int(0x44 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 1, color(0xFF, int(0x44 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 2, color(0xFF, int(0x44 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 3, color(0xFF, int(0x44 * (fraction * 0.5 + 0.5)), 0))
+
+                        # update the LED strip
+                        self._strip.show()
+
+                        # remove oldest position if older than 2 seconds
+                        if positions != []:
+                            if positions[0]["starttime"] + 2 < time.time():
+                                positions.pop(0)
+
+                        # random thunderflash
+                        if time.time() > tick + 0.1:
+                            if random.randrange(1, 200) == 1:
+                                time.sleep(0.5)
+                                for i in range(random.randrange(2, 8)):
+                                    for j in range(24):
+                                        self._strip.setPixelColor(j * 2, color(255, 255, 255))
+                                        self._strip.setPixelColor(j * 2 + 1, color(0, 0, 0))
+                                    self._strip.show()
+                                    time.sleep(0.05)
+                                    for j in range(24):
+                                        self._strip.setPixelColor(j * 2, color(0xFF, 0x66, 0))
+                                    self._strip.show()
+                                    time.sleep(0.03)
+                                if random.randrange(1, 3) != 1:
+                                    time.sleep(0.2)
+                                    for i in range(random.randrange(1, 6)):
+                                        for j in range(24):
+                                            self._strip.setPixelColor(j * 2, color(255, 255, 255))
+                                            self._strip.setPixelColor(j * 2 + 1, color(0, 0, 0))
+                                        self._strip.show()
+                                        time.sleep(0.05)
+                                        for j in range(24):
+                                            self._strip.setPixelColor(j * 2, color(0xFF, 0x66, 0))
+                                        self._strip.show()
+                                        time.sleep(0.03)
+
+                        # reset tick
+                        if time.time() > tick + 0.1:
+                            tick = time.time()
+
+                # red, white and blue (for VE day) - requires ledstrip of lengt 50
                 elif step.get("effect") == 5 or step.get("effect") == "RedWhiteBlueVEDay":
 
                     for i in range(8):
@@ -209,7 +274,7 @@ class LightEffect(threading.Thread):
                 elif step.get("effect") == 0 or step.get("effect") == "OFF":
 
                     for i in range(self._strip.numPixels()):
-                        self._strip.setPixelColor(i, color(0,0,0))
+                        self._strip.setPixelColor(i, color(0, 0, 0))
                     self._strip.show()
 
                 # increment step number
