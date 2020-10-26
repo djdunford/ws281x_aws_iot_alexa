@@ -20,6 +20,7 @@ chgrp -R pi $appdir
 
 # copy webapp and wsgi files
 cp ledcontroller.py $appdir
+cp exceptions.py $appdir
 cp ledcontroller.ini $appdir
 cp -R ledcontroller/* $appdir/ledcontroller
 
