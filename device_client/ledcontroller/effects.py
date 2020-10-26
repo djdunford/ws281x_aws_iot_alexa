@@ -2,6 +2,7 @@
 """Library of programmed effects for WS281X LED strings
 """
 
+import logging
 # effects.py
 #
 # by Darren Dunford
@@ -9,8 +10,6 @@
 # originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
 import random
-
-import logging
 import threading
 import time
 from rpi_ws281x import PixelStrip
@@ -197,11 +196,12 @@ class LightEffect(threading.Thread):
                 elif step.get("effect") == "Halloween":
                     positions = []
                     tick = time.time()
+                    redoffsets = [0.85, 0.95, 1.0, 1.0, 1.0, 0.95, 0.85]
                     while (not self._shutdown_event.is_set()):
 
                         # set all to orange
                         for i in range(self._strip.numPixels()):
-                            self._strip.setPixelColor(i, color(0xFF, 0x44, 0x00))
+                            self._strip.setPixelColor(i, color(0xFF, 0x33, 0x00))
 
                         # add a position (roll the dice!)
                         if time.time() > tick + 0.1:
@@ -210,14 +210,16 @@ class LightEffect(threading.Thread):
 
                         # render the positions
                         for position in positions:
-                            fraction = abs(time.time() - position["starttime"] - 1)
-                            self._strip.setPixelColor(position["position"] - 3, color(0xFF, int(0x44 * (fraction * 0.5 + 0.5)), 0))
-                            self._strip.setPixelColor(position["position"] - 2, color(0xFF, int(0x44 * fraction), 0))
-                            self._strip.setPixelColor(position["position"] - 1, color(0xFF, int(0x44 * fraction), 0))
-                            self._strip.setPixelColor(position["position"], color(0xFF, int(0x44 * fraction), 0))
-                            self._strip.setPixelColor(position["position"] + 1, color(0xFF, int(0x44 * fraction), 0))
-                            self._strip.setPixelColor(position["position"] + 2, color(0xFF, int(0x44 * fraction), 0))
-                            self._strip.setPixelColor(position["position"] + 3, color(0xFF, int(0x44 * (fraction * 0.5 + 0.5)), 0))
+                            fraction = abs(time.time() - position["starttime"] - 1) ** 4
+                            self._strip.setPixelColor(position["position"] - 3,
+                                                      color(0xFF, int(0x33 * (fraction * 0.5 + 0.5)), 0))
+                            self._strip.setPixelColor(position["position"] - 2, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] - 1, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"], color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 1, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 2, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 3,
+                                                      color(0xFF, int(0x33 * (fraction * 0.5 + 0.5)), 0))
 
                         # update the LED strip
                         self._strip.show()
@@ -229,7 +231,7 @@ class LightEffect(threading.Thread):
 
                         # random thunderflash
                         if time.time() > tick + 0.1:
-                            if random.randrange(1, 200) == 1:
+                            if random.randrange(1, 400) == 1:
                                 time.sleep(0.5)
                                 for i in range(random.randrange(2, 8)):
                                     for j in range(24):
@@ -238,21 +240,21 @@ class LightEffect(threading.Thread):
                                     self._strip.show()
                                     time.sleep(0.05)
                                     for j in range(24):
-                                        self._strip.setPixelColor(j * 2, color(0xFF, 0x66, 0))
+                                        self._strip.setPixelColor(j * 2, color(0, 0, 0))
                                     self._strip.show()
                                     time.sleep(0.03)
                                 if random.randrange(1, 3) != 1:
                                     time.sleep(0.2)
                                     for i in range(random.randrange(1, 6)):
+                                        time.sleep(0.03)
                                         for j in range(24):
                                             self._strip.setPixelColor(j * 2, color(255, 255, 255))
                                             self._strip.setPixelColor(j * 2 + 1, color(0, 0, 0))
                                         self._strip.show()
                                         time.sleep(0.05)
                                         for j in range(24):
-                                            self._strip.setPixelColor(j * 2, color(0xFF, 0x66, 0))
+                                            self._strip.setPixelColor(j * 2, color(0, 0, 0))
                                         self._strip.show()
-                                        time.sleep(0.03)
 
                         # reset tick
                         if time.time() > tick + 0.1:
