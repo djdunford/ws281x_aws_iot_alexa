@@ -15,12 +15,13 @@ apt-get install -y python3-pip
 pip3 install -r requirements.txt
 
 # create directory structure for app
-mkdir -p $appdir
+mkdir -p $appdir/ledcontroller
 chgrp -R pi $appdir
 
 # copy webapp and wsgi files
 cp ledcontroller.py $appdir
 cp ledcontroller.ini $appdir
+cp -R ledcontroller/* $appdir/ledcontroller
 
 # install service file
 cp ledcontroller.service /lib/systemd/system
