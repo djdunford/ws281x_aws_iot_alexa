@@ -2,22 +2,54 @@
 """Library of programmed effects for WS281X LED strings
 """
 
+import logging
 # effects.py
 #
 # by Darren Dunford
 #
 # originally based on strandtest.py by Tony DiCola (tony@tonydicola.com)
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
+import random
+import threading
 
 import time
-import logging
-import threading
 from rpi_ws281x import PixelStrip
 
 LOGGER = logging.getLogger(__name__)
 
 
-def color(red: int, green: int, blue: int, white: int=0):
+class LockingPixelStrip(PixelStrip):
+    """extends PixelStrip to expose a thread lock which can be used to ensure exclusive access to the strip
+
+    """
+
+    lock: threading.Lock
+    step_num: int
+
+    def __init__(self, num: int, pin: int, freq: int, dma: int, invert: bool, brightness: int, channel: int):
+        """constructor called to construct the thread locking PixelStrip object
+
+        :param num: number of LEDs on string
+        :param pin: BCM pin number for LED data line (18 uses PWM!)
+        :param freq: LED signal frequency in Hz (usually 800kHz)
+        :param dma: DMA channel to use for generating signal (try 10)
+        :param invert: True to invert the signal (when using NPN transistor level shift)
+        :param brightness: global brightness setting (0 darkest 255 brightest)
+        :param channel: set to 1 for GPIOs 13, 19, 41, 45 or 53
+        """
+
+        # call parent constructor
+        super().__init__(num, pin, freq, dma, invert, brightness, channel)
+
+        # construct instance variables
+        self.lock = threading.Lock()
+        self.program = None
+        self.effect = None
+        self.step = None
+        self.step_num = 0
+
+
+def color(red: int, green: int, blue: int, white: int = 0):
     """Convert the provided red, green, blue color to a 24-bit color value.
     Each color component should be a value 0-255 where 0 is the lowest intensity
     and 255 is the highest intensity.
@@ -53,7 +85,7 @@ class LightEffect(threading.Thread):
 
     """
 
-    def __init__(self, strip: PixelStrip, effect: int = 1, program = None):
+    def __init__(self, strip: LockingPixelStrip, effect: int = 1, program=None):
         """Initialise thread with strip object for LED strip
 
         :param strip: PixelStrip to apply the effect to
@@ -66,8 +98,7 @@ class LightEffect(threading.Thread):
         if program:
             self._program = program
         else:
-            self._program = [{"effect":effect}]
-
+            self._program = [{"effect": effect}]
 
     def run(self):
         """Run light effect selected by effect number passed to constructor
@@ -75,98 +106,265 @@ class LightEffect(threading.Thread):
         :return:
         """
 
-        for step in self._program:
-            start_time: float = time.time()
+        with self._strip.lock:
 
-            # TODO: change effects to use names rather than numbers
-            # UK emergency blue light effect
-            if step.get("effect") == 1:
-                while (not self._shutdown_event.is_set()) and (time.time() < start_time + step.get("duration",86400)):
-                    curr_time = time.time() * 2
-                    for i in range(self._strip.numPixels()):
-                        if int(curr_time % 2) > 0:
-                            if i < (self._strip.numPixels() // 2):
-                                if (int(curr_time * 10) % 2) > 0:
-                                    self._strip.setPixelColor(i, color(0, 0, 255))
-                                else:
-                                    self._strip.setPixelColor(i, color(0, 0, 0))
-                            else:
-                                self._strip.setPixelColor(i, color(0, 0, 0))
-                        else:
-                            if i < (self._strip.numPixels() // 2):
-                                self._strip.setPixelColor(i, color(0, 0, 0))
-                            else:
-                                if (int(curr_time * 10) % 2) > 0:
-                                    self._strip.setPixelColor(i, color(0, 0, 255))
-                                else:
-                                    self._strip.setPixelColor(i, color(0, 0, 0))
-                    self._strip.show()
-                    time.sleep(0.01)
+            # record program and initialise step_num instance variables, can be accessed outside the class
+            self._strip.program = self._program
+            self._strip.step_num = 0
 
-            # Static rainbow effect (requires LED strip of 50 LEDs)
-            elif step.get("effect") == 2:
-                rainbow = [color(255, 0, 0),
-                           color(255, 127, 0),
-                           color(255, 255, 0),
-                           color(0, 255, 0),
-                           color(0, 0, 255),
-                           color(46, 43, 95),
-                           color(139, 0, 255)]
-                length = len(rainbow)
-                for i in range(length):
-                    self._strip.setPixelColor(4 + (i * 3), rainbow[i])
-                    self._strip.setPixelColor(5 + (i * 3), rainbow[i])
-                    self._strip.setPixelColor(6 + (i * 3), rainbow[i])
-                    self._strip.setPixelColor(22 + ((length - i) * 3), rainbow[i])
-                    self._strip.setPixelColor(23 + ((length - i) * 3), rainbow[i])
-                    self._strip.setPixelColor(24 + ((length - i) * 3), rainbow[i])
+            # iterate over the steps in the program
+            for step in self._program:
 
-                self._strip.show()
+                # record step and effect, can be accessed outside the class
+                self._strip.step = step
+                self._strip.effect = step.get("effect")
+                start_time: float = time.time()
 
-            # rainbow_cycle effect
-            elif step.get("effect") == 3:
-
-                wait_ms: int = 20
-
-                while (not self._shutdown_event.is_set()) and (time.time() < start_time + step.get("duration", 86400)):
-                    for j in range(256):
+                # UK emergency blue light effect
+                if step.get("effect") == 1 or step.get("effect") == "EmergencyBlueLight":
+                    while (not self._shutdown_event.is_set()) and (
+                            time.time() < start_time + step.get("duration", 86400)):
+                        curr_time = time.time() * 2
                         for i in range(self._strip.numPixels()):
-                            self._strip.setPixelColor(i, wheel(
-                                (int(i * 256 / self._strip.numPixels()) + j) & 255))
+                            if int(curr_time % 2) > 0:
+                                if i < (self._strip.numPixels() // 2):
+                                    if (int(curr_time * 10) % 2) > 0:
+                                        self._strip.setPixelColor(i, color(0, 0, 255))
+                                    else:
+                                        self._strip.setPixelColor(i, color(0, 0, 0))
+                                else:
+                                    self._strip.setPixelColor(i, color(0, 0, 0))
+                            else:
+                                if i < (self._strip.numPixels() // 2):
+                                    self._strip.setPixelColor(i, color(0, 0, 0))
+                                else:
+                                    if (int(curr_time * 10) % 2) > 0:
+                                        self._strip.setPixelColor(i, color(0, 0, 255))
+                                    else:
+                                        self._strip.setPixelColor(i, color(0, 0, 0))
                         self._strip.show()
-                        time.sleep(wait_ms / 1000.0)
+                        time.sleep(0.01)
 
-            # landing strip effect
-            elif step.get("effect") == 4:
+                # Static rainbow effect (requires LED strip of 50 LEDs)
+                elif step.get("effect") == 2 or step.get("effect") == "RainbowStatic":
+                    rainbow = [color(255, 0, 0),
+                               color(255, 127, 0),
+                               color(255, 255, 0),
+                               color(0, 255, 0),
+                               color(0, 0, 255),
+                               color(46, 43, 95),
+                               color(139, 0, 255)]
+                    length = len(rainbow)
+                    for i in range(length):
+                        self._strip.setPixelColor(4 + (i * 3), rainbow[i])
+                        self._strip.setPixelColor(5 + (i * 3), rainbow[i])
+                        self._strip.setPixelColor(6 + (i * 3), rainbow[i])
+                        self._strip.setPixelColor(22 + ((length - i) * 3), rainbow[i])
+                        self._strip.setPixelColor(23 + ((length - i) * 3), rainbow[i])
+                        self._strip.setPixelColor(24 + ((length - i) * 3), rainbow[i])
 
-                while (not self._shutdown_event.is_set()) and (time.time() < start_time + step.get("duration", 86400)):
-                    for i in range(self._strip.numPixels()):
-                        self._strip.setPixelColor(i, color(200, 200, 200))
                     self._strip.show()
-                    time.sleep(0.05)
-                    for i in range(self._strip.numPixels()):
-                        if (i % 2) == 0:
-                            self._strip.setPixelColor(i, color(0, 0, 0))
+
+                # rainbow_cycle effect
+                elif step.get("effect") == 3 or step.get("effect") == "RainbowCycle":
+
+                    wait_ms: int = 20
+
+                    while (not self._shutdown_event.is_set()) and (
+                            time.time() < start_time + step.get("duration", 86400)):
+                        for j in range(256):
+                            for i in range(self._strip.numPixels()):
+                                self._strip.setPixelColor(i, wheel(
+                                    (int(i * 256 / self._strip.numPixels()) + j) & 255))
+                            self._strip.show()
+                            time.sleep(wait_ms / 1000.0)
+
+                # landing strip effect
+                elif step.get("effect") == 4 or step.get("effect") == "LandingStrip":
+
+                    while (not self._shutdown_event.is_set()) and (
+                            time.time() < start_time + step.get("duration", 86400)):
+                        for i in range(self._strip.numPixels()):
+                            self._strip.setPixelColor(i, color(200, 200, 200))
+                        self._strip.show()
+                        time.sleep(0.05)
+                        for i in range(self._strip.numPixels()):
+                            if (i % 2) == 0:
+                                self._strip.setPixelColor(i, color(0, 0, 0))
+                        self._strip.show()
+                        time.sleep(0.95)
+
+                elif step.get("effect") == "Christmas1":
+
+                    patterns = {
+                        "trunk": [17, 18, 19, 37, 38, 39, 54, 55, 69, 70, 75, 90, 105],
+                        "base": list(range(0, 17)) + list(range(125, 143)),
+                        "star": list(range(71, 75)),
+                        "branches": list(range(20, 37)) + list(range(40, 54)) + list(range(56, 69)) +
+                                    list(range(76, 90)) + list(range(91, 105)) + list(range(106, 125))
+                    }
+
+                    # patterns = {
+                    #     "trunk": [117, 118, 119, 137, 138, 139, 154, 155, 169, 170, 175, 190, 205],
+                    #     "base": list(range(100, 117)) + list(range(225, 243)),
+                    #     "star": list(range(171, 175)),
+                    #     "branches": list(range(120, 137)) + list(range(140, 154)) + list(range(156, 169)) +
+                    #                 list(range(176, 190)) + list(range(191, 205)) + list(range(206, 225))
+                    # }
+
+                    # add offset value to every item in the patterns lists
+                    TREE_OFFSET = 100
+                    for key in patterns:
+                        patterns[key][:] = [i + TREE_OFFSET for i in patterns[key]]
+
+                    patterns.update({ "extended_base": list(range(0,100))+list(range(243,343))+patterns["base"]})
+
+                    twinkle_colours = [
+                        color(255, 0, 0),
+                        color(0, 0, 255),
+                        color(255, 255, 0),
+                        color(0, 255, 255)
+                    ]
+
+                    effects = {"snowing":[], "twinkles":[]}
+                    tick = time.time()
+                    start_time = tick
+
+                    while (not self._shutdown_event.is_set()):
+
+                        # add a twinkle
+                        if time.time() > tick + 0.01:
+                            dice = random.randrange(1, 200)
+                            if dice >= 100 and dice <= 170:
+                                effects["snowing"].append({"starttime": time.time(), "position": random.choice(patterns["extended_base"])})
+                            elif dice >= 1 and dice <= 15:
+                                effects["twinkles"].append({"starttime": time.time(), "position": random.choice(patterns["branches"]), "colour":random.choice(twinkle_colours)})
+                            tick = time.time()
+
+                        # trunk is static
+                        for i in patterns.get("trunk"):
+                            self._strip.setPixelColor(i, color(150,75,0))
+
+                        # base snowing effect
+                        for i in patterns.get("extended_base"):
+                            self._strip.setPixelColor(i, color(50, 50, 50))
+                        for effect in effects["snowing"]:
+                            brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * (255 - 50) + 50)
+                            if brightness >= 100:
+                                self._strip.setPixelColor(effect["position"], color(brightness,brightness,brightness))
+
+                        # star flashes yellow
+                        # star_colour = twinkle_colours[int(time.time() - start_time) % len(twinkle_colours)]
+                        star_colour_comp = int(abs((time.time() - start_time) % 2 - 1) * 255)
+                        for i in patterns.get("star"):
+                            self._strip.setPixelColor(i, color(star_colour_comp,star_colour_comp,0))
+
+                        # christmas tree lights
+                        for i in patterns.get("branches"):
+                            self._strip.setPixelColor(i, color(0,255,0))
+                        for effect in effects["twinkles"]:
+                            self._strip.setPixelColor(effect["position"], effect["colour"])
+
+                        self._strip.show()
+
+                        if effects["snowing"] != [] and effects["snowing"][0]["starttime"] + 1 < time.time():
+                            effects["snowing"].pop(0)
+
+                        if effects["twinkles"] != [] and effects["twinkles"][0]["starttime"] + 1 < time.time():
+                            effects["twinkles"].pop(0)
+
+                elif step.get("effect") == "Halloween":
+                    positions = []
+                    tick = time.time()
+                    redoffsets = [0.85, 0.95, 1.0, 1.0, 1.0, 0.95, 0.85]
+                    while (not self._shutdown_event.is_set()):
+
+                        # set all to orange
+                        for i in range(self._strip.numPixels()):
+                            self._strip.setPixelColor(i, color(0xFF, 0x33, 0x00))
+
+                        # add a position (roll the dice!)
+                        if time.time() > tick + 0.1:
+                            if random.randrange(1, 10) == 1:
+                                positions.append({"starttime": time.time(), "position": random.randrange(5, 45)})
+
+                        # render the positions
+                        for position in positions:
+                            fraction = abs(time.time() - position["starttime"] - 1) ** 4
+                            self._strip.setPixelColor(position["position"] - 3,
+                                                      color(0xFF, int(0x33 * (fraction * 0.5 + 0.5)), 0))
+                            self._strip.setPixelColor(position["position"] - 2, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] - 1, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"], color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 1, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 2, color(0xFF, int(0x33 * fraction), 0))
+                            self._strip.setPixelColor(position["position"] + 3,
+                                                      color(0xFF, int(0x33 * (fraction * 0.5 + 0.5)), 0))
+
+                        # update the LED strip
+                        self._strip.show()
+
+                        # remove oldest position if older than 2 seconds
+                        if positions != []:
+                            if positions[0]["starttime"] + 2 < time.time():
+                                positions.pop(0)
+
+                        # random thunderflash
+                        if time.time() > tick + 0.1:
+                            if random.randrange(1, 400) == 1:
+                                time.sleep(0.5)
+                                for i in range(random.randrange(2, 8)):
+                                    for j in range(24):
+                                        self._strip.setPixelColor(j * 2, color(255, 255, 255))
+                                        self._strip.setPixelColor(j * 2 + 1, color(0, 0, 0))
+                                    self._strip.show()
+                                    time.sleep(0.05)
+                                    for j in range(24):
+                                        self._strip.setPixelColor(j * 2, color(0, 0, 0))
+                                    self._strip.show()
+                                    time.sleep(0.03)
+                                if random.randrange(1, 3) != 1:
+                                    time.sleep(0.2)
+                                    for i in range(random.randrange(1, 6)):
+                                        time.sleep(0.03)
+                                        for j in range(24):
+                                            self._strip.setPixelColor(j * 2, color(255, 255, 255))
+                                            self._strip.setPixelColor(j * 2 + 1, color(0, 0, 0))
+                                        self._strip.show()
+                                        time.sleep(0.05)
+                                        for j in range(24):
+                                            self._strip.setPixelColor(j * 2, color(0, 0, 0))
+                                        self._strip.show()
+
+                        # reset tick
+                        if time.time() > tick + 0.1:
+                            tick = time.time()
+
+                # red, white and blue (for VE day) - requires ledstrip of lengt 50
+                elif step.get("effect") == 5 or step.get("effect") == "RedWhiteBlueVEDay":
+
+                    for i in range(8):
+                        self._strip.setPixelColor(i * 6 + 1, color(255, 0, 0))
+                        self._strip.setPixelColor(i * 6 + 2, color(255, 0, 0))
+                        self._strip.setPixelColor(i * 6 + 3, color(255, 255, 255))
+                        self._strip.setPixelColor(i * 6 + 4, color(255, 255, 255))
+                        self._strip.setPixelColor(i * 6 + 5, color(0, 0, 255))
+                        self._strip.setPixelColor(i * 6 + 6, color(0, 0, 255))
                     self._strip.show()
-                    time.sleep(0.95)
 
-            # red, white and blue (for VE day) - requires ledstip of length 50
-            elif step.get("effect") == 5:
+                # blackout
+                elif step.get("effect") == 0 or step.get("effect") == "OFF":
 
-                for i in range(8):
-                    self._strip.setPixelColor(i*6+1,color(255,0,0))
-                    self._strip.setPixelColor(i*6+2,color(255,0,0))
-                    self._strip.setPixelColor(i*6+3,color(255,255,255))
-                    self._strip.setPixelColor(i*6+4,color(255,255,255))
-                    self._strip.setPixelColor(i*6+5,color(0,0,255))
-                    self._strip.setPixelColor(i*6+6,color(0,0,255))
+                    for i in range(self._strip.numPixels()):
+                        self._strip.setPixelColor(i, color(0, 0, 0))
+                    self._strip.show()
 
-                self._strip.show()
+                # increment step number
+                self._strip.step_num += 1
 
-        # after program complete, loop until terminate flag received
-        while not self._shutdown_event.is_set():
-            pass
-
+            # after program complete, loop until terminate flag received
+            while not self._shutdown_event.is_set():
+                pass
 
     def stop(self):
         """Set stop flag for thread
@@ -177,6 +375,7 @@ class LightEffect(threading.Thread):
         self._shutdown_event.set()
 
 
+# TODO reimplement theater_chase within run as an effect
 def theater_chase(strip: PixelStrip, color: color, wait_ms: int = 50, iterations: int = 10):
     """Movie theater light style chaser animation.
 
@@ -199,7 +398,7 @@ def theater_chase(strip: PixelStrip, color: color, wait_ms: int = 50, iterations
 def wheel(pos: int):
     """Generate rainbow colors across 0-255 positions.
 
-    :param pos:
+    :param pos: position to return color for (0-255)
     :return:
     """
     if pos < 85:
@@ -211,6 +410,7 @@ def wheel(pos: int):
     return color(0, pos * 3, 255 - pos * 3)
 
 
+# TODO reimplement rainbow within run as an effect
 def rainbow(strip: PixelStrip, wait_ms: int = 20, iterations: int = 1):
     """Draw rainbow that fades across all pixels at once.
 
@@ -226,6 +426,7 @@ def rainbow(strip: PixelStrip, wait_ms: int = 20, iterations: int = 1):
         time.sleep(wait_ms / 1000.0)
 
 
+# TODO reimplement rainbow_cycle within run as an effect
 def rainbow_cycle(strip: PixelStrip, wait_ms: int = 20, iterations: int = 5):
     """Draw rainbow that uniformly distributes itself across all pixels.
 
@@ -242,6 +443,7 @@ def rainbow_cycle(strip: PixelStrip, wait_ms: int = 20, iterations: int = 5):
         time.sleep(wait_ms / 1000.0)
 
 
+# TODO reimplement theater_chase_rainbow within run as an effect
 def theater_chase_rainbow(strip: PixelStrip, wait_ms: int = 50):
     """Rainbow movie theater light style chaser animation.
 

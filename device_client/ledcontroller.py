@@ -20,15 +20,13 @@ import time
 import yaml
 import queue
 from gpiozero import CPUTemperature
-from rpi_ws281x import PixelStrip
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import color_wipe, LightEffect, color
+from ledcontroller.effects import LockingPixelStrip, color_wipe, LightEffect, color
 from exceptions import InterruptException, ExitException
 
 # LED strip configuration:
-LED_COUNT = 50  # Number of LED pixels.
+LED_COUNT = 350  # Number of LED pixels.
 LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
-# LED_PIN = 10        # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_DMA = 10  # DMA channel to use for generating signal (try 10)
 LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
@@ -47,6 +45,32 @@ def post_temperature(interval: int=300):
     while True:
         cpu = CPUTemperature()
         device.post_temperature(cpu.temperature)
+        time.sleep(interval)
+
+def post_lightstatus(interval: int=10):
+    """
+    thread safe daemon function posts current status of lights every interval seconds
+
+    :param interval:
+    :return:
+    """
+    while True:
+
+        # create list of RGB values
+        lights = []
+        for i in range(strip.numPixels()):
+            lights.append(strip.getPixelColor(i))
+
+        # post status JSON
+        device.post_state({
+            "lights":lights,
+            "brightness":strip.getBrightness(),
+            "program":strip.program,
+            "effect":strip.effect,
+            "step":strip.step,
+            "step_num":strip.step_num,
+            "run_program":run_program,
+        })
         time.sleep(interval)
 
 
@@ -89,9 +113,12 @@ if __name__ == '__main__':
     LOGGER.addHandler(sysloghandler)
 
     # read parameters from ini file and build params dictionary
+    # note: explicitly defining parameters here also defines default values and ensures rogue parameters
+    # are not injected from an external source
     globs = config['settings']
     settings = {}
     settings.update({'post_temperature_interval': globs.getint('post_temperature_interval', fallback=300)})
+    settings.update({'post_lightstatus_interval': globs.getint('post_lightstatus_interval', fallback=10)})
 
     # create master set of keys from parameter array
     # used later to prevent injection of any other keys
@@ -109,15 +136,28 @@ if __name__ == '__main__':
         private_key_path=AWSIOT_PRIVATE_KEY_PATH)
 
     # Create NeoPixel object with appropriate configuration and initialise library
-    strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
+    strip = LockingPixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
     # launch daemon thread to post temperature to AWSIoT at required interval
     temperaturepost_thread = threading.Thread(
         target=post_temperature,
         args=(settings.get('post_temperature_interval'),),
-        daemon=True)
+        daemon=True,
+    )
     temperaturepost_thread.start()
+
+    # set default program to run and set no effect
+    run_program: str = "autostart"
+    effect: int = 0
+
+    # launch daemon thread to post pixel strip status to AWSIoT at required interval
+    lightstatuspost_thread = threading.Thread(
+        target=post_lightstatus,
+        args=(settings.get('post_lightstatus_interval'),),
+        daemon=True,
+    )
+    lightstatuspost_thread.start()
 
     # load in light program
     with open("program.yaml", 'r') as stream:
@@ -126,7 +166,6 @@ if __name__ == '__main__':
         except yaml.YAMLError as exc:
             print(exc)
 
-    run_program = "autostart"
     lights_thread: LightEffect = LightEffect(strip)
 
     # main loop for running lights programs and reacting to events
@@ -136,18 +175,45 @@ if __name__ == '__main__':
             # main loop for running a specific light program and reacting to events
             try:
 
-                # select program
-                program = programs.get(run_program)
-                device.status_post(f"RUNNING PROGRAM {run_program}")
-                lights_thread: LightEffect = LightEffect(strip, program = program)
+                # select program or effect
+                if run_program != "":
+                    program = programs.get(run_program)
+                    device.status_post(f"RUNNING PROGRAM {run_program}")
+                    lights_thread: LightEffect = LightEffect(strip, program = program)
+                else:
+                    device.status_post(f"RUNNING EFFECT {effect}")
+                    lights_thread: LightEffect = LightEffect(strip, effect = effect)
                 lights_thread.start()
 
                 # react to event queue
                 while True:
                     try:
                         event = device.event_queue.get_nowait()
-                        if event == {"command": "STOP"}:
+
+                        # parse and handle any commands received
+                        command = event.get("command")
+                        if command == "STOP" or command.get("action") == "STOP":
                             raise ExitException
+
+                        elif command.get("action") == "RUN":
+                            run_program = command.get("program")
+                            raise InterruptException
+
+                        elif command.get("action") == "EFFECT":
+                            run_program = ""
+                            effect = command.get("effect")
+                            raise InterruptException
+
+                        elif command.get("action") == "OFF":
+                            run_program = ""
+                            effect = 0
+                            raise InterruptException
+
+                        # parse and handle settings changes received
+                        settings = event.get("settings")
+                        if settings:
+                            pass  # TODO handle settings changes
+
                     except queue.Empty:
                         pass
                     time.sleep(0.1)
