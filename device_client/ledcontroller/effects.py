@@ -11,6 +11,7 @@ import logging
 # see https://github.com/rpi-ws281x/rpi-ws281x-python
 import random
 import threading
+
 import time
 from rpi_ws281x import PixelStrip
 
@@ -192,6 +193,85 @@ class LightEffect(threading.Thread):
                                 self._strip.setPixelColor(i, color(0, 0, 0))
                         self._strip.show()
                         time.sleep(0.95)
+
+                elif step.get("effect") == "Christmas1":
+
+                    patterns = {
+                        "trunk": [17, 18, 19, 37, 38, 39, 54, 55, 69, 70, 75, 90, 105],
+                        "base": list(range(0, 17)) + list(range(125, 143)),
+                        "star": list(range(71, 75)),
+                        "branches": list(range(20, 37)) + list(range(40, 54)) + list(range(56, 69)) +
+                                    list(range(76, 90)) + list(range(91, 105)) + list(range(106, 125))
+                    }
+
+                    # patterns = {
+                    #     "trunk": [117, 118, 119, 137, 138, 139, 154, 155, 169, 170, 175, 190, 205],
+                    #     "base": list(range(100, 117)) + list(range(225, 243)),
+                    #     "star": list(range(171, 175)),
+                    #     "branches": list(range(120, 137)) + list(range(140, 154)) + list(range(156, 169)) +
+                    #                 list(range(176, 190)) + list(range(191, 205)) + list(range(206, 225))
+                    # }
+
+                    # add offset value to every item in the patterns lists
+                    TREE_OFFSET = 100
+                    for key in patterns:
+                        patterns[key][:] = [i + TREE_OFFSET for i in patterns[key]]
+
+                    patterns.update({ "extended_base": list(range(0,100))+list(range(243,343))+patterns["base"]})
+
+                    twinkle_colours = [
+                        color(255, 0, 0),
+                        color(0, 0, 255),
+                        color(255, 255, 0),
+                        color(0, 255, 255)
+                    ]
+
+                    effects = {"snowing":[], "twinkles":[]}
+                    tick = time.time()
+                    start_time = tick
+
+                    while (not self._shutdown_event.is_set()):
+
+                        # add a twinkle
+                        if time.time() > tick + 0.01:
+                            dice = random.randrange(1, 200)
+                            if dice >= 100 and dice <= 170:
+                                effects["snowing"].append({"starttime": time.time(), "position": random.choice(patterns["extended_base"])})
+                            elif dice >= 1 and dice <= 15:
+                                effects["twinkles"].append({"starttime": time.time(), "position": random.choice(patterns["branches"]), "colour":random.choice(twinkle_colours)})
+                            tick = time.time()
+
+                        # trunk is static
+                        for i in patterns.get("trunk"):
+                            self._strip.setPixelColor(i, color(150,75,0))
+
+                        # base snowing effect
+                        for i in patterns.get("extended_base"):
+                            self._strip.setPixelColor(i, color(50, 50, 50))
+                        for effect in effects["snowing"]:
+                            brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * (255 - 50) + 50)
+                            if brightness >= 100:
+                                self._strip.setPixelColor(effect["position"], color(brightness,brightness,brightness))
+
+                        # star flashes yellow
+                        # star_colour = twinkle_colours[int(time.time() - start_time) % len(twinkle_colours)]
+                        star_colour_comp = int(abs((time.time() - start_time) % 2 - 1) * 255)
+                        for i in patterns.get("star"):
+                            self._strip.setPixelColor(i, color(star_colour_comp,star_colour_comp,0))
+
+                        # christmas tree lights
+                        for i in patterns.get("branches"):
+                            self._strip.setPixelColor(i, color(0,255,0))
+                        for effect in effects["twinkles"]:
+                            self._strip.setPixelColor(effect["position"], effect["colour"])
+
+                        self._strip.show()
+
+                        if effects["snowing"] != [] and effects["snowing"][0]["starttime"] + 1 < time.time():
+                            effects["snowing"].pop(0)
+
+                        if effects["twinkles"] != [] and effects["twinkles"][0]["starttime"] + 1 < time.time():
+                            effects["twinkles"].pop(0)
 
                 elif step.get("effect") == "Halloween":
                     positions = []
