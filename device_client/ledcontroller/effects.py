@@ -202,7 +202,7 @@ class LightEffect(threading.Thread):
                             if block % 2 == 0:
                                 self._strip.setPixelColor(i, color(0, 0, 255))
                             else:
-                                self._strip.setPixelColor(i, color(0, 255, 255))
+                                self._strip.setPixelColor(i, color(255, 0, 255))
                         self._strip.show()
 
 
