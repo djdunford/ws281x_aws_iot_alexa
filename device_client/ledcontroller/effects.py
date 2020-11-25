@@ -194,6 +194,18 @@ class LightEffect(threading.Thread):
                         self._strip.show()
                         time.sleep(0.95)
 
+                elif step.get("effect") == "TestPattern":
+
+                    while not self._shutdown_event.is_set():
+                        for i in range(self._strip.numPixels()):
+                            block = i // 5
+                            if block % 2 == 0:
+                                self._strip.setPixelColor(i, color(0, 0, 255))
+                            else:
+                                self._strip.setPixelColor(i, color(0, 255, 255))
+                        self._strip.show()
+
+
                 elif step.get("effect") == "Christmas1":
 
                     patterns = {
