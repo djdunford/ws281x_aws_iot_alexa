@@ -1,8 +1,7 @@
 <template>
   <v-layout column justify-center align-center>
     <v-flex xs12 sm8 md6>
-      <div class="text-center">
-      </div>
+      <div class="text-center"></div>
       <div class="container">
         <div v-if="!signedIn">
           <amplify-authenticator />

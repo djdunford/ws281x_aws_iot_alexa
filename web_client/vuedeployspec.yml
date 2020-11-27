@@ -1,0 +1,30 @@
+version: 0.2
+
+env:
+  parameter-store:
+    DEPLOY_BUCKET: "LEDSTRIP_URL"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 8
+
+    commands:
+      # Upgrade AWS CLI and boto3 to the latest version
+      - echo 'Installing awscli for python'
+      - pip install --upgrade awscli
+
+  build:
+    commands:
+      # build vue app
+      - cd web_client
+      - yarn generate
+
+      # copy the contents of /build to S3
+      - aws s3 cp --recursive --acl public-read ./dist s3://$DEPLOY_BUCKET/
+      # set the cache-control headers for index.html to prevent
+      # browser caching
+      - >
+        aws s3 cp --acl public-read
+        --cache-control="max-age=0, no-cache, no-store, must-revalidate"
+        ./dist/index.html s3://$DEPLOY_BUCKET/
