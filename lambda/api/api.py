@@ -37,7 +37,7 @@ def off(event, context):
     # obtain thing_name from query parameter
     try:
         thing_name = event['queryStringParameters']['thing_name']
-    except ValueError:
+    except KeyError:
         LOGGER.error(ERROR_QUERY_STRING_PARAMETER)
         raise MissingQueryStringParameterException(ERROR_QUERY_STRING_PARAMETER)  # TODO: check CORS headers on error responses
 
@@ -61,14 +61,14 @@ def effect(event, context):
     # obtain thing_name from query parameter
     try:
         thing_name = event['queryStringParameters']['thing_name']
-    except ValueError:
+    except KeyError:
         LOGGER.error(ERROR_QUERY_STRING_PARAMETER)
         raise MissingQueryStringParameterException(ERROR_QUERY_STRING_PARAMETER)  # TODO: check CORS headers on error responses
 
     # obtain effect number from path parameter
     try:
         effect_name = event['pathParameters']['effect']
-    except ValueError:
+    except KeyError:
         raise MissingPathParameterException("Invalid sequence parameter - must be a non-zero integer")
 
     LOGGER.debug(f"Received thing_name {thing_name} to show effect {effect_name}")
