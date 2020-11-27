@@ -93,6 +93,16 @@ def color_wipe(strip: PixelStrip, color: color, wait_ms: int = 50):
         time.sleep(wait_ms / 1000.0)
 
 
+def clear_strip(strip: PixelStrip):
+    """Turn all lights off instantly.
+
+    :return:
+    """
+    for i in range(strip.numPixels()):
+        strip.setPixelColor(i, color(0, 0, 0))
+    strip.show()
+
+
 class LightEffect(threading.Thread):
     """Thread object constructed to run a specific effect on a specific PixelStrip
 

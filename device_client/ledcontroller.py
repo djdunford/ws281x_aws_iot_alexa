@@ -21,7 +21,7 @@ import yaml
 import queue
 from gpiozero import CPUTemperature
 from ledcontroller.deviceshadowhandler import DeviceShadowHandler
-from ledcontroller.effects import LockingPixelStrip, color_wipe, LightEffect, color
+from ledcontroller.effects import LockingPixelStrip, color_wipe, LightEffect, color, clear_strip
 from exceptions import InterruptException, ExitException
 
 # LED strip configuration:
@@ -226,7 +226,7 @@ if __name__ == '__main__':
                     lights_thread.join()
                 except RuntimeError:
                     pass
-                color_wipe(strip, color(0, 0, 0), 10)
+                clear_strip(strip)
                 device.status_post("CURRENT PROGRAM STOPPED")
 
     # to exit cleanup thread and terminate
@@ -237,5 +237,6 @@ if __name__ == '__main__':
             lights_thread.join()
         except RuntimeError:
             pass
-        color_wipe(strip, color(0, 0, 0), 10)
+
+        clear_strip(strip)
         device.status_post("STOPPED")
