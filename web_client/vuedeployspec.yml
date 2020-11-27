@@ -18,6 +18,7 @@ phases:
     commands:
       # build vue app
       - cd web_client
+      - yarn install
       - yarn generate
 
       # copy the contents of /build to S3
