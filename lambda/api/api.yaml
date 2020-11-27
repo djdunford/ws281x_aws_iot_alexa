@@ -13,7 +13,7 @@ Resources:
     Properties:
       Handler: api.off
       Events:
-        HelloWorld:
+        Api:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /off
@@ -30,6 +30,31 @@ Resources:
         Fn::GetAtt:
           - LambdaExecutionRole
           - Arn
+
+
+  EffectFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Handler: api.effect
+      Events:
+        Api:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: "/effect/{effect}"
+            Method: post
+            RequestParameters: # note see https://github.com/awslabs/serverless-application-model/issues/1403
+              - method.request.querystring.thingname:
+                  Required: true
+                  Caching: false
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: AWS_IAM
+              InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+
 
   ApiDomainMapping:
     Type: 'AWS::ApiGateway::BasePathMapping'
