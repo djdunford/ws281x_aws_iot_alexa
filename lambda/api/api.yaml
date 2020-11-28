@@ -26,6 +26,14 @@ Resources:
             Auth:
               Authorizer: AWS_IAM
               InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
+        MorningReset:
+          Type: Schedule
+          Properties:
+            Schedule: "cron(30 23 * * ? *)"  # every day at 2330
+            Input: '{"name":"evening-shutoff"}'
+            Description: "shutoff daily at 2330"
+            Enabled: True
+
       Role:
         Fn::GetAtt:
           - LambdaExecutionRole
