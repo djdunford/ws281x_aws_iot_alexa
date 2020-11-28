@@ -249,8 +249,10 @@ class LightEffect(threading.Thread):
                         # add a twinkle
                         if time.time() > tick + 0.01:
                             dice = random.randrange(1, 200)
-                            if dice >= 40 and dice <= 170:
-                                effects["snowing"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                            if dice >= 40 and dice <= 140:
+                                effects["snowing"].append({"starttime": time.time(), "blue": False, "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                            elif dice >= 150 and dice <= 180:
+                                effects["snowing"].append({"starttime": time.time(), "blue": True, "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 15:
                                 effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
                             tick = time.time()
@@ -264,8 +266,11 @@ class LightEffect(threading.Thread):
                             self._strip.setPixelColor(i, color(50, 50, 50))
                         for effect in effects["snowing"]:
                             brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * (255 - 50) + 50)
-                            if brightness >= 100:
-                                self._strip.setPixelColor(effect["position"], color(brightness,brightness,brightness))
+                            if brightness >= 50:
+                                if effect["blue"]:
+                                    self._strip.setPixelColor(effect["position"], color(50,brightness,brightness))
+                                else:
+                                    self._strip.setPixelColor(effect["position"], color(brightness,brightness,brightness))
 
                         # star flashes yellow
                         # star_colour = twinkle_colours[int(time.time() - start_time) % len(twinkle_colours)]
@@ -315,9 +320,12 @@ class LightEffect(threading.Thread):
                         for i in XMAS_PATTERNS.get("trunk"):
                             self._strip.setPixelColor(i, color(150,75,0))
 
-                        # base snowing effect
+                        # base red/green effect
                         for i in XMAS_PATTERNS.get("extended_base"):
-                            self._strip.setPixelColor(i, color(255, 0, 0))
+                            if (i // 3) % 2 == 1:
+                                self._strip.setPixelColor(i, color(255, 0, 0))
+                            else:
+                                self._strip.setPixelColor(i, color(0, 255, 0))
                         for effect in effects["snowing"]:
                             brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * 255)
                             if 0 <= brightness <= 255:
