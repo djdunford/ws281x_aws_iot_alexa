@@ -29,7 +29,7 @@ Resources:
         MorningReset:
           Type: Schedule
           Properties:
-            Schedule: "cron(40 23 * * ? *)"  # every day at 2330
+            Schedule: "cron(50 23 * * ? *)"  # every day at 2330
             Input: '{"name":"evening-shutoff"}'
             Description: "shutoff daily at 2330"
             Enabled: True
