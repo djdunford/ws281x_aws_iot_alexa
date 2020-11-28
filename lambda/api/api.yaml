@@ -68,15 +68,15 @@ Resources:
   Api:
     Type: AWS::Serverless::Api
     Properties:
+      MethodSettings:
+        - LoggingLevel: INFO
+          ThrottlingBurstLimit: 10
+          ThrottlingRateLimit: 5
+          ResourcePath: '/*' # allows for logging on any resource
+          HttpMethod: '*' # allows for logging on any method
       Name: LedstripApiProd
       StageName: prod
       EndpointConfiguration: REGIONAL
-      MethodSettings: [{
-                         "ThrottlingBurstLimit": 10,
-                         "ThrottlingRateLimit": 5,
-                         "ResourcePath": "/*",
-                         "HttpMethod": "*",
-                       }]
       Cors:
         AllowMethods: "'OPTIONS,POST,GET'"
         AllowHeaders: "'X-Amz-Security-Token,Content-Type,X-Amz-Date,Authorization,X-Api-Key'"

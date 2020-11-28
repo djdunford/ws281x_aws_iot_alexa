@@ -25,7 +25,8 @@ const awsmobile = {
   aws_cloud_logic_custom: [
     {
       name: 'ws281xapi',
-      endpoint: 'https://tmtiqr7byh.execute-api.eu-west-1.amazonaws.com/prod',
+      //endpoint: 'https://tmtiqr7byh.execute-api.eu-west-1.amazonaws.com/prod',
+      endpoint: 'https://api.debsanddarren.com/ledstrip',
       region: 'eu-west-1',
     },
   ],
