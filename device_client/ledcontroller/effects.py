@@ -29,7 +29,7 @@ TREE_OFFSET = 100
 for key in XMAS_PATTERNS:
     XMAS_PATTERNS[key][:] = [i + TREE_OFFSET for i in XMAS_PATTERNS[key]]
 
-XMAS_PATTERNS.update({ "extended_base": list(range(0,100))+list(range(243,343))+XMAS_PATTERNS["base"]})
+XMAS_PATTERNS.update({ "extended_base": list(range(0,100))+list(range(243,543))+XMAS_PATTERNS["base"]})
 
 class LockingPixelStrip(PixelStrip):
     """extends PixelStrip to expose a thread lock which can be used to ensure exclusive access to the strip
