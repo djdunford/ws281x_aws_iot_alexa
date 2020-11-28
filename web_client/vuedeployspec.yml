@@ -7,7 +7,7 @@ env:
 phases:
   install:
     runtime-versions:
-      nodejs: 8
+      nodejs: 10
 
     commands:
       # Upgrade AWS CLI and boto3 to the latest version
