@@ -168,6 +168,7 @@ Resources:
                   - "cognito-sync:*"
                   - "cognito-idp:*"
                   - "cloudformation:*"
+                  - "events:PutRule"
                 Resource:
                   - "*"
 
