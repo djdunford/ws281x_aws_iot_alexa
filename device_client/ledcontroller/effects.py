@@ -297,8 +297,8 @@ class LightEffect(threading.Thread):
                     # add offset value to every item in the patterns lists
 
                     twinkle_colours = [
-                        color(255, 255, 0),
-                        color(255, 0, 0)
+                        color(0, 0, 255),
+                        color(255, 0, 127)
                     ]
 
                     effects = {"snowing":[], "twinkles":[]}
@@ -312,7 +312,7 @@ class LightEffect(threading.Thread):
                             dice = random.randrange(1, 200)
                             if dice >= 40 and dice <= 170:
                                 effects["snowing"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["extended_base"])})
-                            elif dice >= 1 and dice <= 15:
+                            elif dice >= 1 and dice <= 30:
                                 effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
                             tick = time.time()
 
