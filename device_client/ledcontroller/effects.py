@@ -249,7 +249,7 @@ class LightEffect(threading.Thread):
                         # add a twinkle
                         if time.time() > tick + 0.01:
                             dice = random.randrange(1, 200)
-                            if dice >= 100 and dice <= 170:
+                            if dice >= 40 and dice <= 170:
                                 effects["snowing"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 15:
                                 effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
@@ -305,7 +305,7 @@ class LightEffect(threading.Thread):
                         # add a twinkle
                         if time.time() > tick + 0.01:
                             dice = random.randrange(1, 200)
-                            if dice >= 100 and dice <= 170:
+                            if dice >= 40 and dice <= 170:
                                 effects["snowing"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 15:
                                 effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
