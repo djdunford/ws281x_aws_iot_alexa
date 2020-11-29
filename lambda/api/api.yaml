@@ -29,8 +29,8 @@ Resources:
         MorningReset:
           Type: Schedule
           Properties:
-            Schedule: "cron(50 23 * * ? *)"  # every day at 2330
-            Input: '{"name":"evening-shutoff"}'
+            Schedule: "cron(0/2 0 * * ? *)"  # every day at 2330
+            Input: '{"queryStringParameters": {"thing_name": "ThomasLights2"}}'  # TODO remove hardcoded thing_name
             Description: "shutoff daily at 2330"
             Enabled: True
 
