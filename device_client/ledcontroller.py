@@ -118,7 +118,7 @@ if __name__ == '__main__':
     globs = config['settings']
     settings = {}
     settings.update({'post_temperature_interval': globs.getint('post_temperature_interval', fallback=300)})
-    settings.update({'post_lightstatus_interval': globs.getint('post_lightstatus_interval', fallback=10)})
+    settings.update({'post_lightstatus_interval': globs.getint('post_lightstatus_interval', fallback=30)})
 
     # create master set of keys from parameter array
     # used later to prevent injection of any other keys
