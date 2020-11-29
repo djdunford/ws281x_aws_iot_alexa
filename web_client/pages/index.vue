@@ -16,6 +16,12 @@
         </v-card-title>
         <v-card-actions>
           <v-spacer />
+          <v-btn v-if="signedIn" nuxt color="primary" @click="click_xmas1"
+            >XMAS1
+          </v-btn>
+          <v-btn v-if="signedIn" nuxt color="primary" @click="click_xmas2"
+            >XMAS2
+          </v-btn>
           <v-btn v-if="signedIn" nuxt color="primary" @click="click_test"
             >TEST
           </v-btn>
@@ -82,6 +88,32 @@ export default {
         },
       }
       API.post('ws281xapi', '/effect/TestPattern', payload).catch((error) => {
+        console.log(error.response) // eslint-disable-line no-console
+      })
+    },
+    click_xmas1() {
+      console.log('test clicked') // eslint-disable-line no-console
+      const payload = {
+        body: {},
+        headers: {},
+        queryStringParameters: {
+          thing_name: 'ThomasLights2',
+        },
+      }
+      API.post('ws281xapi', '/effect/Christmas1', payload).catch((error) => {
+        console.log(error.response) // eslint-disable-line no-console
+      })
+    },
+    click_xmas2() {
+      console.log('test clicked') // eslint-disable-line no-console
+      const payload = {
+        body: {},
+        headers: {},
+        queryStringParameters: {
+          thing_name: 'ThomasLights2',
+        },
+      }
+      API.post('ws281xapi', '/effect/Christmas2', payload).catch((error) => {
         console.log(error.response) // eslint-disable-line no-console
       })
     },
