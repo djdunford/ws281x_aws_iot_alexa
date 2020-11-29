@@ -25,11 +25,12 @@ XMAS_PATTERNS = {
                 list(range(76, 90)) + list(range(91, 105)) + list(range(106, 125))
 }
 
-TREE_OFFSET = 100
+TREE_OFFSET = 117
 for key in XMAS_PATTERNS:
     XMAS_PATTERNS[key][:] = [i + TREE_OFFSET for i in XMAS_PATTERNS[key]]
 
-XMAS_PATTERNS.update({ "extended_base": list(range(0,100))+list(range(243,543))+XMAS_PATTERNS["base"]})
+XMAS_PATTERNS.update({"extended_base": list(range(0, 117)) + list(range(260, 543)) + XMAS_PATTERNS["base"]})
+
 
 class LockingPixelStrip(PixelStrip):
     """extends PixelStrip to expose a thread lock which can be used to ensure exclusive access to the strip
@@ -240,7 +241,7 @@ class LightEffect(threading.Thread):
                         color(255, 0, 127)
                     ]
 
-                    effects = {"snowing":[], "twinkles":[]}
+                    effects = {"snowing": [], "twinkles": []}
                     tick = time.time()
                     start_time = tick
 
@@ -250,37 +251,42 @@ class LightEffect(threading.Thread):
                         if time.time() > tick + 0.01:
                             dice = random.randrange(1, 200)
                             if dice >= 40 and dice <= 140:
-                                effects["snowing"].append({"starttime": time.time(), "blue": False, "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                                effects["snowing"].append({"starttime": time.time(), "blue": False,
+                                                           "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 150 and dice <= 180:
-                                effects["snowing"].append({"starttime": time.time(), "blue": True, "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                                effects["snowing"].append({"starttime": time.time(), "blue": True,
+                                                           "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 15:
-                                effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
+                                effects["twinkles"].append(
+                                    {"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]),
+                                     "colour": random.choice(twinkle_colours)})
                             tick = time.time()
 
                         # trunk is static
                         for i in XMAS_PATTERNS.get("trunk"):
-                            self._strip.setPixelColor(i, color(150,75,0))
+                            self._strip.setPixelColor(i, color(150, 75, 0))
 
                         # base snowing effect
                         for i in XMAS_PATTERNS.get("extended_base"):
                             self._strip.setPixelColor(i, color(50, 50, 50))
                         for effect in effects["snowing"]:
-                            brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * (255 - 50) + 50)
+                            brightness = int((1 - abs((time.time() - effect["starttime"]) * 2 - 1)) * (255 - 50) + 50)
                             if brightness >= 50:
                                 if effect["blue"]:
-                                    self._strip.setPixelColor(effect["position"], color(50,brightness,brightness))
+                                    self._strip.setPixelColor(effect["position"], color(50, brightness, brightness))
                                 else:
-                                    self._strip.setPixelColor(effect["position"], color(brightness,brightness,brightness))
+                                    self._strip.setPixelColor(effect["position"],
+                                                              color(brightness, brightness, brightness))
 
                         # star flashes yellow
                         # star_colour = twinkle_colours[int(time.time() - start_time) % len(twinkle_colours)]
                         star_colour_comp = int(abs((time.time() - start_time) % 2 - 1) * 255)
                         for i in XMAS_PATTERNS.get("star"):
-                            self._strip.setPixelColor(i, color(star_colour_comp,star_colour_comp,0))
+                            self._strip.setPixelColor(i, color(star_colour_comp, star_colour_comp, 0))
 
                         # christmas tree lights
                         for i in XMAS_PATTERNS.get("branches"):
-                            self._strip.setPixelColor(i, color(0,255,0))
+                            self._strip.setPixelColor(i, color(0, 255, 0))
                         for effect in effects["twinkles"]:
                             self._strip.setPixelColor(effect["position"], effect["colour"])
 
@@ -301,7 +307,7 @@ class LightEffect(threading.Thread):
                         color(255, 0, 127)
                     ]
 
-                    effects = {"snowing":[], "twinkles":[]}
+                    effects = {"snowing": [], "twinkles": []}
                     tick = time.time()
                     start_time = tick
 
@@ -311,14 +317,17 @@ class LightEffect(threading.Thread):
                         if time.time() > tick + 0.01:
                             dice = random.randrange(1, 200)
                             if dice >= 40 and dice <= 170:
-                                effects["snowing"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                                effects["snowing"].append({"starttime": time.time(),
+                                                           "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 30:
-                                effects["twinkles"].append({"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]), "colour":random.choice(twinkle_colours)})
+                                effects["twinkles"].append(
+                                    {"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]),
+                                     "colour": random.choice(twinkle_colours)})
                             tick = time.time()
 
                         # trunk is static
                         for i in XMAS_PATTERNS.get("trunk"):
-                            self._strip.setPixelColor(i, color(150,75,0))
+                            self._strip.setPixelColor(i, color(150, 75, 0))
 
                         # base red/green effect
                         for i in XMAS_PATTERNS.get("extended_base"):
@@ -327,19 +336,19 @@ class LightEffect(threading.Thread):
                             else:
                                 self._strip.setPixelColor(i, color(0, 255, 0))
                         for effect in effects["snowing"]:
-                            brightness = int((1-abs((time.time() - effect["starttime"]) * 2 - 1)) * 255)
+                            brightness = int((1 - abs((time.time() - effect["starttime"]) * 2 - 1)) * 255)
                             if 0 <= brightness <= 255:
                                 self._strip.setPixelColor(effect["position"], color(255, brightness, 0))
 
                         # star flashes yellow
                         # star_colour = twinkle_colours[int(time.time() - start_time) % len(twinkle_colours)]
-                        star_colour_comp = int(abs((time.time()*2 - start_time*2) % 2 - 1) * 255)
+                        star_colour_comp = int(abs((time.time() * 2 - start_time * 2) % 2 - 1) * 255)
                         for i in XMAS_PATTERNS.get("star"):
-                            self._strip.setPixelColor(i, color(star_colour_comp,star_colour_comp,0))
+                            self._strip.setPixelColor(i, color(star_colour_comp, star_colour_comp, 0))
 
                         # christmas tree lights
                         for i in XMAS_PATTERNS.get("branches"):
-                            self._strip.setPixelColor(i, color(0,255,0))
+                            self._strip.setPixelColor(i, color(0, 255, 0))
                         for effect in effects["twinkles"]:
                             self._strip.setPixelColor(effect["position"], effect["colour"])
 
