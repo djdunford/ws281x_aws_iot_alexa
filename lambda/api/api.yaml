@@ -26,7 +26,7 @@ Resources:
             Auth:
               Authorizer: AWS_IAM
               InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
-        MorningReset:
+        EveningOff:
           Type: Schedule
           Properties:
             Schedule: "cron(0 23 * * ? *)"  # every day at 2300
@@ -58,6 +58,14 @@ Resources:
             Auth:
               Authorizer: AWS_IAM
               InvokeRole: NONE  # see https://github.com/awslabs/serverless-application-model/issues/923
+        ScheduleOn:
+          Type: Schedule
+          Properties:
+            Schedule: "cron(15 15 * * ? *)"  # every day at 1515
+            Input: '{"queryStringParameters": {"thing_name": "ThomasLights2"}, "pathParameters": {"effect": "Christmas1"}}'  # TODO remove hardcoded thing_name
+            Description: "show Christmas1 effect at 1515 every day"
+            Enabled: True
+
       Role:
         Fn::GetAtt:
           - LambdaExecutionRole
