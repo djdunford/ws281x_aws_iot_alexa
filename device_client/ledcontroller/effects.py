@@ -319,6 +319,8 @@ class LightEffect(threading.Thread):
                             if dice >= 40 and dice <= 190:
                                 effects["snowing"].append({"starttime": time.time(),
                                                            "position": random.choice(XMAS_PATTERNS["extended_base"])})
+                                effects["snowing"].append({"starttime": time.time(),
+                                                           "position": random.choice(XMAS_PATTERNS["extended_base"])})
                             elif dice >= 1 and dice <= 30:
                                 effects["twinkles"].append(
                                     {"starttime": time.time(), "position": random.choice(XMAS_PATTERNS["branches"]),
@@ -357,10 +359,10 @@ class LightEffect(threading.Thread):
 
                         self._strip.show()
 
-                        if effects["snowing"] != [] and effects["snowing"][0]["starttime"] + 1 < time.time():
+                        while effects["snowing"] != [] and effects["snowing"][0]["starttime"] + 1 < time.time():
                             effects["snowing"].pop(0)
 
-                        if effects["twinkles"] != [] and effects["twinkles"][0]["starttime"] + 1 < time.time():
+                        while effects["twinkles"] != [] and effects["twinkles"][0]["starttime"] + 1 < time.time():
                             effects["twinkles"].pop(0)
 
 
