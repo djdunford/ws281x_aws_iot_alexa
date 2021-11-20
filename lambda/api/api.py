@@ -26,7 +26,7 @@ LOGGER.debug(f"Using region {os.environ['AWS_REGION']}")
 iot_client = boto3.client('iot', region_name=os.environ['AWS_REGION'])
 endpoint_response = iot_client.describe_endpoint(endpointType='iot:Data-ATS')
 LOGGER.debug(f"Using IOT endpoint {endpoint_response}")
-endpoint_url = endpoint_response['endpointAddress']
+endpoint_url = f"https://{endpoint_response['endpointAddress']}"
 iot_data_client = boto3.client('iot-data', region_name=os.environ['AWS_REGION'], endpoint_url=endpoint_url)
 
 
