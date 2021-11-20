@@ -121,5 +121,9 @@ Resources:
                 Action:
                   - "iot:GetThingShadow"
                   - "iot:UpdateThingShadow"
-                  - "iot:DescribeEndpoint"
                 Resource: "arn:aws:iot:*:*:thing/*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "iot:DescribeEndpoint"
+                Resource: "*"
