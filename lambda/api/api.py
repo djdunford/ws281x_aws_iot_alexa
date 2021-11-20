@@ -8,17 +8,26 @@ uses AWSIoT integration for remote control
 Author: Darren Dunford (djdunford@gmail.com)
 """
 
+import os
 import json
-import boto3
 import logging
 
-# set up logger
+import boto3
+
+# constants
 ERROR_QUERY_STRING_PARAMETER = "Error getting query string parameter"
+
+# set up logger
 LOGGER = logging.getLogger("api")
 LOGGER.setLevel(logging.DEBUG)
 
 # set up IOT Client
-IOT_CLIENT = boto3.client('iot-data', region_name='eu-west-1')  # TODO remove hardcode reference to region
+LOGGER.debug(f"Using region {os.environ['AWS_REGION']}")
+iot_client = boto3.client('iot', region_name=os.environ['AWS_REGION'])
+endpoint_response = iot_client.describe_endpoint(endpointType='iot:Data-ATS')
+LOGGER.debug(f"Using IOT endpoint {endpoint_response}")
+endpoint_url = endpoint_response['endpointAddress']
+iot_data_client = boto3.client('iot-data', region_name=os.environ['AWS_REGION'], endpoint_url=endpoint_url)
 
 
 # custom exceptions for error conditions
@@ -43,7 +52,7 @@ def off(event, context):
 
     # publish event to AWSIoT MQTT
     payload = {"state": {"desired": {"command": {"action": "OFF"}}}}
-    response = IOT_CLIENT.update_thing_shadow(thingName=thing_name, payload=json.dumps(payload))
+    response = iot_data_client.update_thing_shadow(thingName=thing_name, payload=json.dumps(payload))
 
     # TODO interpret response from update_thing_shadow
     streaming_body = response["payload"]
@@ -75,7 +84,7 @@ def effect(event, context):
 
     # publish event to AWSIoT MQTT
     payload = {"state": {"desired": {"command": {"action": "EFFECT", "effect": effect_name}}}}
-    response = IOT_CLIENT.update_thing_shadow(thingName=thing_name, payload=json.dumps(payload))
+    response = iot_data_client.update_thing_shadow(thingName=thing_name, payload=json.dumps(payload))
 
     # TODO interpret response from update_thing_shadow
     streaming_body = response["payload"]
