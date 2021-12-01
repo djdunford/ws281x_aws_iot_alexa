@@ -32,7 +32,7 @@ Resources:
             Schedule: "cron(0 23 * * ? *)"  # every day at 2300
             Input: '{"queryStringParameters": {"thing_name": "ThomasLights2"}}'  # TODO remove hardcoded thing_name
             Description: "shutoff daily at 2300"
-            Enabled: False
+            Enabled: True
 
       Role:
         Fn::GetAtt:
@@ -64,7 +64,7 @@ Resources:
             Schedule: "cron(15 15 * * ? *)"  # every day at 1515
             Input: '{"queryStringParameters": {"thing_name": "ThomasLights2"}, "pathParameters": {"effect": "Christmas1"}}'  # TODO remove hardcoded thing_name
             Description: "show Christmas1 effect at 1515 every day"
-            Enabled: False
+            Enabled: True
 
       Role:
         Fn::GetAtt:
